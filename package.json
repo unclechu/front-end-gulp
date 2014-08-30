@@ -1,0 +1,32 @@
+{
+	"dependencies": {
+		"yargs": "*",
+		"gulp": "*",
+		"gulp-clean": "*",
+		"gulp.spritesmith": "*",
+		"gulp-task-listing": "*",
+		"gulp-less": "*",
+		"gulp-if": "*",
+		"gulp-rename": "*",
+		"gulp-browserify": "*",
+		"gulp-uglify": "*",
+		"gulp-jshint": "*",
+		"jshint-stylish": "*"
+	},
+	"scripts": {
+		"postinstall": "./node_modules/.bin/gulp --production"
+	},
+
+	"gulp": {
+		"distclean": [
+			"./gulp",
+			"./node_modules"
+		],
+		"sprites": {
+		},
+		"less": {
+		},
+		"browserify": {
+		}
+	}
+}
