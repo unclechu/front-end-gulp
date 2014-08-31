@@ -26,7 +26,7 @@ require! {
 	stylish: \jshint-stylish
 }
 
-gulp.task \help, tasks
+gulp.task \help , tasks
 
 production = argv.production?
 
@@ -51,14 +51,14 @@ clean-task = (list) ->
 		retval.push(gulp.src item .pipe clean force: true)
 	retval
 
-gulp.task \clean, [
+gulp.task \clean , [
 	\clean-sprites
 	\clean-less
 	\clean-browserify
 ], ->
 	merge.apply null, clean-task clean-data
 
-gulp.task \distclean, [\clean], ->
+gulp.task \distclean , [ \clean ], ->
 	merge.apply null, clean-task dist-clean-data
 
 # clean }}}1
@@ -107,8 +107,8 @@ for name, item of sprites-data
 	sprites-clean-tasks.push \clean-sprite- + name
 	sprites-build-tasks.push \sprite- + name
 
-gulp.task \clean-sprites, sprites-clean-tasks
-gulp.task \sprites, sprites-build-tasks
+gulp.task \clean-sprites , sprites-clean-tasks
+gulp.task \sprites , sprites-build-tasks
 
 # sprites }}}1
 
@@ -149,8 +149,8 @@ for name, item of less-data
 	less-clean-tasks.push \clean-less- + name
 	less-build-tasks.push \less- + name
 
-gulp.task \clean-less, less-clean-tasks
-gulp.task \less, less-build-tasks
+gulp.task \clean-less , less-clean-tasks
+gulp.task \less , less-build-tasks
 
 # less }}}1
 
@@ -219,8 +219,8 @@ for name, item of browserify-data
 	browserify-clean-tasks.push \clean-browserify- + name
 	browserify-build-tasks.push \browserify- + name
 
-gulp.task \clean-browserify, browserify-clean-tasks
-gulp.task \browserify, browserify-build-tasks
+gulp.task \clean-browserify , browserify-clean-tasks
+gulp.task \browserify , browserify-build-tasks
 
 # browserify }}}1
 
