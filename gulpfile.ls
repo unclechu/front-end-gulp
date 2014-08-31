@@ -45,21 +45,16 @@ clean-data = pkg.gulp.clean or []
 dist-clean-data = pkg.gulp.distclean or []
 
 clean-task = (list) ->
-	return [gulp] if not Array.isArray list
-	retval = []
-	for item in list
-		retval.push(gulp.src item .pipe clean force: true)
-	retval
+	return gulp if list.length <= 0
+	gulp.src list .pipe clean force: true
 
 gulp.task \clean , [
 	\clean-sprites
 	\clean-less
 	\clean-browserify
-], ->
-	merge.apply null, clean-task clean-data
+], -> clean-task clean-data
 
-gulp.task \distclean , [ \clean ], ->
-	merge.apply null, clean-task dist-clean-data
+gulp.task \distclean , [ \clean ], -> clean-task dist-clean-data
 
 # clean }}}1
 
@@ -78,6 +73,7 @@ sprite-clean-task = (name, sprite-params, params) ->
 
 sprite-build-task = (name, sprite-params, params) ->
 	sprite-data = gulp.src path.join params.img-dir, 'src/*.png'
+		.pipe spritesmith sprite-params
 	img = sprite-data.img.pipe gulp.dest path.join params.img-dir, 'build/'
 	css = sprite-data.css.pipe gulp.dest params.css-dir
 	[ img, css ]
@@ -90,7 +86,7 @@ for name, item of sprites-data
 		img-path: path.join item.img-path-prefix, 'build/', img-name
 		padding: item.padding or 1
 		img-opts: format: \png
-		css-var-map: (s) !->
+		css-var-map: let name then (s) !->
 			s.name = \sprite- + name + \- + s.name;
 		algorithm: item.algorithm or \top-down
 
@@ -98,11 +94,13 @@ for name, item of sprites-data
 		img-dir: item.img-dir
 		css-dir: item.css-dir
 
-	gulp.task \clean-sprite- + name, ->
-		merge.apply null, sprite-clean-task name, sprite-params, params
+	gulp.task \clean-sprite- + name,
+		let name, sprite-params, params
+			-> sprite-clean-task name, sprite-params, params
 
-	gulp.task \sprite- + name, [\clean-sprite- + name], ->
-		merge.apply null, sprite-build-task name, sprite-params, params
+	gulp.task \sprite- + name, [\clean-sprite- + name],
+		let name, sprite-params, params
+			-> merge.apply null, sprite-build-task name, sprite-params, params
 
 	sprites-clean-tasks.push \clean-sprite- + name
 	sprites-build-tasks.push \sprite- + name
@@ -135,16 +133,16 @@ for name, item of less-data
 		main-src: item.main-src
 		build-file: item.build-file
 
-	required-sprites = []
+	pre-build-tasks = [\clean-less- + name]
 	if item.required-sprites then
 		for sprite-name in item.required-sprites
-			required-sprites.push \sprite- + sprite-name
+			pre-build-tasks.push \sprite- + sprite-name
 
-	gulp.task \clean-less- + name, required-sprites, ->
-		less-clean-task name, params
+	gulp.task \clean-less- + name,
+		let name, params then -> less-clean-task name, params
 
-	gulp.task \less- + name, [\clean-less- + name], ->
-		less-build-task name, params
+	gulp.task \less- + name, pre-build-tasks,
+		let name, params then -> less-build-task name, params
 
 	less-clean-tasks.push \clean-less- + name
 	less-build-tasks.push \less- + name
@@ -166,7 +164,7 @@ browserify-clean-task = (name, params) ->
 
 browserify-jshint-task = (name, params) ->
 	src = [ path.join params.path, 'src/**/*.js' ]
-	for item in params.jshint-exclude then src.push \! + exclude
+	for exclude in params.jshint-exclude then src.push \! + exclude
 	gulp.src src .pipe jshint params.jshint-params
 		.pipe jshint.reporter stylish
 
@@ -174,21 +172,17 @@ browserify-build-task = (name, params) ->
 	gulp.src path.join params.path, 'src/', params.main-src
 		.pipe browserify shim: params.shim, debug: not production
 		.pipe gulpif production, uglify preserveComments: \some
-		.pipe rename !->
+		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest path.join params.path, 'build/'
 
 for name, item of browserify-data
 	# parse relative paths in "shim"
-	if item.shim
-		new-shim = {}
-		for key, shim-item of item.shim
-			new-item = ^^shim-item
-			for param-name, val of shim-item then if param-name is \relativePath
-				new-item.path = path.join item.path, 'src/', val.relativePath
-				delete new-item[param-name]
-			new-shim[key] = new-item
-		item.shim = new-shim
+	if item.shim then for key, shim-item of item.shim
+		for param-name, val of shim-item
+			if param-name is \relativePath
+				shim-item.path = path.join item.path, 'src/', val
+				delete shim-item[param-name]
 
 	params =
 		path: item.path
@@ -206,15 +200,15 @@ for name, item of browserify-data
 	pre-build-tasks = [\clean-browserify- + name]
 
 	if not params.jshint-disabled
-		gulp.task \browserify- + name + \-jshint, ->
-			browserify-jshint-task name, params
+		gulp.task \browserify- + name + \-jshint,
+			let name, params then -> browserify-jshint-task name, params
 		pre-build-tasks.push \browserify- + name + \-jshint
 
-	gulp.task \clean-browserify- + name, ->
-		browserify-clean-task name, params
+	gulp.task \clean-browserify- + name,
+		let name, params then -> browserify-clean-task name, params
 
-	gulp.task \browserify- + name, pre-build-tasks, ->
-		browserify-build-task name, params
+	gulp.task \browserify- + name, pre-build-tasks,
+		let name, params then -> browserify-build-task name, params
 
 	browserify-clean-tasks.push \clean-browserify- + name
 	browserify-build-tasks.push \browserify- + name
