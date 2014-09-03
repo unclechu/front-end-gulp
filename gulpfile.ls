@@ -94,11 +94,17 @@ for name, item of sprites-data
 		img-dir: item.img-dir
 		css-dir: item.css-dir
 
+	pre-build-tasks = [\clean-sprite- + name]
+
+	if item.build-deps then
+		for task-name in item.build-deps
+			pre-build-tasks.push task-name
+
 	gulp.task \clean-sprite- + name,
 		let name, sprite-params, params
 			-> sprite-clean-task name, sprite-params, params
 
-	gulp.task \sprite- + name, [\clean-sprite- + name],
+	gulp.task \sprite- + name, pre-build-tasks,
 		let name, sprite-params, params
 			-> merge.apply null, sprite-build-task name, sprite-params, params
 
@@ -134,9 +140,10 @@ for name, item of less-data
 		build-file: item.build-file
 
 	pre-build-tasks = [\clean-less- + name]
-	if item.required-sprites then
-		for sprite-name in item.required-sprites
-			pre-build-tasks.push \sprite- + sprite-name
+
+	if item.build-deps then
+		for task-name in item.build-deps
+			pre-build-tasks.push task-name
 
 	gulp.task \clean-less- + name,
 		let name, params then -> less-clean-task name, params
@@ -198,6 +205,10 @@ for name, item of browserify-data
 			params.jshint-exclude.push path.join item.path, 'src/', exclude
 
 	pre-build-tasks = [\clean-browserify- + name]
+
+	if item.build-deps then
+		for task-name in item.build-deps
+			pre-build-tasks.push task-name
 
 	if not params.jshint-disabled
 		gulp.task \browserify- + name + \-jshint,
