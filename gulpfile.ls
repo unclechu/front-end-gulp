@@ -117,8 +117,7 @@ sprite-init-tasks = (name, item, sub-task=false) !->
 			-> merge.apply null, sprite-build-task name, sprite-params, params
 
 	sprites-clean-tasks.push \clean-sprite- + name
-	if not sub-task
-		sprites-build-tasks.push \sprite- + name
+	if not sub-task then sprites-build-tasks.push \sprite- + name
 
 for name, item of sprites-data
 	init-task-iteration name, item, sprite-init-tasks
@@ -164,8 +163,7 @@ less-init-tasks = (name, item, sub-task=false) !->
 		let name, params then -> less-build-task name, params
 
 	less-clean-tasks.push \clean-less- + name
-	if not sub-task
-		less-build-tasks.push \less- + name
+	if not sub-task then less-build-tasks.push \less- + name
 
 for name, item of less-data
 	init-task-iteration name, item, less-init-tasks
@@ -238,8 +236,7 @@ browserify-init-tasks = (name, item, sub-task=false) !->
 		let name, params then -> browserify-build-task name, params
 
 	browserify-clean-tasks.push \clean-browserify- + name
-	if not sub-task
-		browserify-build-tasks.push \browserify- + name
+	if not sub-task then browserify-build-tasks.push \browserify- + name
 
 for name, item of browserify-data
 	init-task-iteration name, item, browserify-init-tasks
