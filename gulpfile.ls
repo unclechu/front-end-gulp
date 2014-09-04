@@ -37,6 +37,14 @@ rename-build-file = (build-path, main-src, build-file) !->
 		build-path.extname = path.extname build-file
 		build-path.basename = path.basename build-file, build-path.extname
 
+init-task-iteration = (name, item, init-func) !->
+	init-func name, item
+	if item.sub-tasks then for sub-task-name, sub-task of item.sub-tasks
+		sub-task-params = ^^item
+		sub-task-params.sub-task = null
+		for key, val of sub-task then sub-task-params[key] = val
+		init-func name + \- + sub-task-name, sub-task-params, true
+
 # helpers }}}1
 
 # clean {{{1
@@ -78,7 +86,7 @@ sprite-build-task = (name, sprite-params, params) ->
 	css = sprite-data.css.pipe gulp.dest params.css-dir
 	[ img, css ]
 
-for name, item of sprites-data
+sprite-init-tasks = (name, item, sub-task=false) !->
 	img-name = item.img-name or \sprite.png
 	sprite-params =
 		img-name: img-name
@@ -109,7 +117,11 @@ for name, item of sprites-data
 			-> merge.apply null, sprite-build-task name, sprite-params, params
 
 	sprites-clean-tasks.push \clean-sprite- + name
-	sprites-build-tasks.push \sprite- + name
+	if not sub-task
+		sprites-build-tasks.push \sprite- + name
+
+for name, item of sprites-data
+	init-task-iteration name, item, sprite-init-tasks
 
 gulp.task \clean-sprites , sprites-clean-tasks
 gulp.task \sprites , sprites-build-tasks
@@ -133,7 +145,7 @@ less-build-task = (name, params) ->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest path.join params.path, 'build/'
 
-for name, item of less-data
+less-init-tasks = (name, item, sub-task=false) !->
 	params =
 		path: item.path
 		main-src: item.main-src
@@ -152,7 +164,11 @@ for name, item of less-data
 		let name, params then -> less-build-task name, params
 
 	less-clean-tasks.push \clean-less- + name
-	less-build-tasks.push \less- + name
+	if not sub-task
+		less-build-tasks.push \less- + name
+
+for name, item of less-data
+	init-task-iteration name, item, less-init-tasks
 
 gulp.task \clean-less , less-clean-tasks
 gulp.task \less , less-build-tasks
@@ -183,7 +199,7 @@ browserify-build-task = (name, params) ->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest path.join params.path, 'build/'
 
-for name, item of browserify-data
+browserify-init-tasks = (name, item, sub-task=false) !->
 	# parse relative paths in "shim"
 	if item.shim then for key, shim-item of item.shim
 		for param-name, val of shim-item
@@ -222,7 +238,11 @@ for name, item of browserify-data
 		let name, params then -> browserify-build-task name, params
 
 	browserify-clean-tasks.push \clean-browserify- + name
-	browserify-build-tasks.push \browserify- + name
+	if not sub-task
+		browserify-build-tasks.push \browserify- + name
+
+for name, item of browserify-data
+	init-task-iteration name, item, browserify-init-tasks
 
 gulp.task \clean-browserify , browserify-clean-tasks
 gulp.task \browserify , browserify-build-tasks
