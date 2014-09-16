@@ -1,5 +1,5 @@
 /**
- * @version r3
+ * @version r4
  * @author Viacheslav Lotsmanov
  * @license GNU/GPLv3 by Free Software Foundation (https://github.com/unclechu/web-front-end-gulp-template/blob/master/LICENSE)
  * @see {@link https://github.com/unclechu/web-front-end-gulp-template|GitHub}
@@ -58,8 +58,8 @@ clean-task = (list) ->
 
 gulp.task \clean , [
 	\clean-sprites
-	\clean-less
-	\clean-browserify
+	\clean-styles
+	\clean-scripts
 ], -> clean-task clean-data
 
 gulp.task \distclean , [ \clean ], -> clean-task dist-clean-data
@@ -127,69 +127,72 @@ gulp.task \sprites , sprites-build-tasks
 
 # sprites }}}1
 
-# less {{{1
+# styles {{{1
 
-less-clean-tasks = []
-less-build-tasks = []
+styles-clean-tasks = []
+styles-build-tasks = []
 
-less-data = pkg.gulp.less or {}
+styles-data = pkg.gulp.styles or {}
 
-less-clean-task = (name, params) ->
+styles-clean-task = (name, params) ->
 	gulp.src path.join params.path, 'build/' .pipe clean force: true
 
-less-build-task = (name, params) ->
+styles-build-less-task = (name, params) ->
 	gulp.src path.join params.path, 'src/', params.main-src
 		.pipe less compress: production
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest path.join params.path, 'build/'
 
-less-init-tasks = (name, item, sub-task=false) !->
+styles-init-tasks = (name, item, sub-task=false) !->
 	params =
 		path: item.path
 		main-src: item.main-src
 		build-file: item.build-file
 
-	pre-build-tasks = [\clean-less- + name]
+	pre-build-tasks = [\clean-styles- + name]
 
 	if item.build-deps then
 		for task-name in item.build-deps
 			pre-build-tasks.push task-name
 
-	gulp.task \clean-less- + name,
-		let name, params then -> less-clean-task name, params
+	gulp.task \clean-styles- + name,
+		let name, params then -> styles-clean-task name, params
 
-	gulp.task \less- + name, pre-build-tasks,
-		let name, params then -> less-build-task name, params
+	if item.type is \less
+		gulp.task \styles- + name, pre-build-tasks,
+			let name, params then -> styles-build-less-task name, params
+	else
+		throw new Error "Unknown styles type for \"#name\" task."
 
-	less-clean-tasks.push \clean-less- + name
-	if not sub-task then less-build-tasks.push \less- + name
+	styles-clean-tasks.push \clean-styles- + name
+	if not sub-task then styles-build-tasks.push \styles- + name
 
-for name, item of less-data
-	init-task-iteration name, item, less-init-tasks
+for name, item of styles-data
+	init-task-iteration name, item, styles-init-tasks
 
-gulp.task \clean-less , less-clean-tasks
-gulp.task \less , less-build-tasks
+gulp.task \clean-styles , styles-clean-tasks
+gulp.task \styles , styles-build-tasks
 
-# less }}}1
+# styles }}}1
 
-# browserify {{{1
+# scripts {{{1
 
-browserify-clean-tasks = []
-browserify-build-tasks = []
+scripts-clean-tasks = []
+scripts-build-tasks = []
 
-browserify-data = pkg.gulp.browserify or {}
+scripts-data = pkg.gulp.scripts or {}
 
-browserify-clean-task = (name, params) ->
+scripts-clean-task = (name, params) ->
 	gulp.src path.join params.path, 'build/' .pipe clean force: true
 
-browserify-jshint-task = (name, params) ->
+scripts-jshint-task = (name, params) ->
 	src = [ path.join params.path, 'src/**/*.js' ]
 	for exclude in params.jshint-exclude then src.push \! + exclude
 	gulp.src src .pipe jshint params.jshint-params
 		.pipe jshint.reporter stylish
 
-browserify-build-task = (name, params) ->
+scripts-build-browserify-task = (name, params) ->
 	gulp.src path.join params.path, 'src/', params.main-src
 		.pipe browserify shim: params.shim, debug: not production
 		.pipe gulpif production, uglify preserveComments: \some
@@ -197,7 +200,7 @@ browserify-build-task = (name, params) ->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest path.join params.path, 'build/'
 
-browserify-init-tasks = (name, item, sub-task=false) !->
+scripts-init-tasks = (name, item, sub-task=false) !->
 	# parse relative paths in "shim"
 	if item.shim then for key, shim-item of item.shim
 		for param-name, val of shim-item
@@ -218,36 +221,39 @@ browserify-init-tasks = (name, item, sub-task=false) !->
 		for exclude in item.jshint-relative-exclude
 			params.jshint-exclude.push path.join item.path, 'src/', exclude
 
-	pre-build-tasks = [\clean-browserify- + name]
+	pre-build-tasks = [\clean-scripts- + name]
 
 	if item.build-deps then
 		for task-name in item.build-deps
 			pre-build-tasks.push task-name
 
 	if not params.jshint-disabled
-		gulp.task \browserify- + name + \-jshint,
-			let name, params then -> browserify-jshint-task name, params
-		pre-build-tasks.push \browserify- + name + \-jshint
+		gulp.task \scripts- + name + \-jshint,
+			let name, params then -> scripts-jshint-task name, params
+		pre-build-tasks.push \scripts- + name + \-jshint
 
-	gulp.task \clean-browserify- + name,
-		let name, params then -> browserify-clean-task name, params
+	gulp.task \clean-scripts- + name,
+		let name, params then -> scripts-clean-task name, params
 
-	gulp.task \browserify- + name, pre-build-tasks,
-		let name, params then -> browserify-build-task name, params
+	if item.type is \browserify
+		gulp.task \scripts- + name, pre-build-tasks,
+			let name, params then -> scripts-build-browserify-task name, params
+	else
+		throw new Error "Unknown scripts type for \"#name\" task."
 
-	browserify-clean-tasks.push \clean-browserify- + name
-	if not sub-task then browserify-build-tasks.push \browserify- + name
+	scripts-clean-tasks.push \clean-scripts- + name
+	if not sub-task then scripts-build-tasks.push \scripts- + name
 
-for name, item of browserify-data
-	init-task-iteration name, item, browserify-init-tasks
+for name, item of scripts-data
+	init-task-iteration name, item, scripts-init-tasks
 
-gulp.task \clean-browserify , browserify-clean-tasks
-gulp.task \browserify , browserify-build-tasks
+gulp.task \clean-scripts , scripts-clean-tasks
+gulp.task \scripts , scripts-build-tasks
 
-# browserify }}}1
+# scripts }}}1
 
 gulp.task \default [
 	\sprites
-	\less
-	\browserify
+	\styles
+	\scripts
 ]
