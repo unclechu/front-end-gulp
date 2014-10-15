@@ -6,24 +6,24 @@
  */
 
 require! {
-	pkg: './package.json'
+	'./package.json' : pkg
 
 	path
 
 	gulp
-	argv: yargs .argv
-	merge: \merge-stream
+	yargs : {argv}
+	\merge-stream : merge
 
-	clean: \gulp-clean
-	spritesmith: \gulp.spritesmith
-	tasks: \gulp-task-listing
-	less: \gulp-less
-	gulpif: \gulp-if
-	rename: \gulp-rename
-	browserify: \gulp-browserify
-	uglify: \gulp-uglify
-	jshint: \gulp-jshint
-	stylish: \jshint-stylish
+	\gulp-clean : clean
+	\gulp.spritesmith : spritesmith
+	\gulp-task-listing : tasks
+	\gulp-less : less
+	\gulp-if : gulpif
+	\gulp-rename : rename
+	\gulp-browserify : browserify
+	\gulp-uglify : uglify
+	\gulp-jshint : jshint
+	\jshint-stylish : stylish
 }
 
 gulp.task \help , tasks
