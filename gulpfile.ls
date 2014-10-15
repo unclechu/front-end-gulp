@@ -1,7 +1,7 @@
 /**
- * @version r5
+ * @version r6
  * @author Viacheslav Lotsmanov
- * @license GNU/GPLv3 by Free Software Foundation (https://github.com/unclechu/web-front-end-gulp-template/blob/master/LICENSE)
+ * @license GNU/GPLv3 (https://github.com/unclechu/web-front-end-gulp-template/blob/master/LICENSE)
  * @see {@link https://github.com/unclechu/web-front-end-gulp-template|GitHub}
  */
 
