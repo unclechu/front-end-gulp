@@ -1,13 +1,11 @@
 /**
- * @version r6
+ * @version r7
  * @author Viacheslav Lotsmanov
  * @license GNU/GPLv3 (https://github.com/unclechu/web-front-end-gulp-template/blob/master/LICENSE)
  * @see {@link https://github.com/unclechu/web-front-end-gulp-template|GitHub}
  */
 
 require! {
-	'./package.json' : pkg
-
 	path
 
 	gulp
@@ -25,6 +23,8 @@ require! {
 	\gulp-jshint : jshint
 	\jshint-stylish : stylish
 }
+
+pkg = require path.join process.cwd() , './package.json'
 
 gulp.task \help , tasks
 
