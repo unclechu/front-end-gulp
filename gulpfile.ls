@@ -6,8 +6,6 @@
  */
 
 require! {
-	'./package.json' : pkg
-
 	path
 
 	gulp
@@ -25,6 +23,8 @@ require! {
 	\gulp-jshint : jshint
 	\jshint-stylish : stylish
 }
+
+pkg = require path.join process.cwd() , './package.json'
 
 gulp.task \help , tasks
 
