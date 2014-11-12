@@ -16,6 +16,7 @@ require! {
 	\gulp.spritesmith : spritesmith
 	\gulp-task-listing : tasks
 	\gulp-less : less
+	\gulp-stylus : stylus
 	\gulp-if : gulpif
 	\gulp-rename : rename
 	\gulp-browserify : browserify
@@ -134,15 +135,17 @@ styles-data = pkg.gulp.styles or {}
 styles-clean-task = (name, params, cb) !->
 	del path.join( params.path, 'build/' ) , cb
 
-styles-build-less-task = (name, params) ->
+styles-build-task = (name, params) ->
 	gulp.src path.join params.path, 'src/', params.main-src
-		.pipe less compress: production
+		.pipe gulpif params.type is \less , less compress: production
+		.pipe gulpif params.type is \stylus , stylus compress: production
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest path.join params.path, 'build/'
 
 styles-init-tasks = (name, item, sub-task=false) !->
 	params =
+		type: item.type
 		path: item.path
 		main-src: item.main-src
 		build-file: item.build-file
@@ -156,9 +159,9 @@ styles-init-tasks = (name, item, sub-task=false) !->
 	gulp.task \clean-styles- + name,
 		let name, params then (cb) !-> styles-clean-task name, params, cb
 
-	if item.type is \less
+	if item.type is \less or item.type is \stylus
 		gulp.task \styles- + name, pre-build-tasks,
-			let name, params then -> styles-build-less-task name, params
+			let name, params then -> styles-build-task name, params
 	else
 		throw new Error "Unknown styles type for \"#name\" task."
 
