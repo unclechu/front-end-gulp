@@ -19,6 +19,7 @@ require! {
 	\gulp-if : gulpif
 	\gulp-rename : rename
 	\gulp-browserify : browserify
+	liveify
 	\gulp-uglify : uglify
 	\gulp-jshint : jshint
 	\jshint-stylish : stylish
@@ -189,8 +190,16 @@ scripts-jshint-task = (name, params) ->
 		.pipe jshint.reporter stylish
 
 scripts-build-browserify-task = (name, params) ->
-	gulp.src path.join params.path, 'src/', params.main-src
-		.pipe browserify shim: params.shim, debug: not production
+	options =
+		shim: params.shim
+		debug: not production
+
+	if params.type is \liveify
+		options.transform = [ \liveify ]
+		options.extensions = [ \.ls ]
+
+	gulp.src path.join( params.path, 'src/', params.main-src ), read: false
+		.pipe browserify options
 		.pipe gulpif production, uglify preserveComments: \some
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
@@ -205,6 +214,7 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 				delete shim-item[param-name]
 
 	params =
+		type: item.type
 		path: item.path
 		main-src: item.main-src
 		build-file: item.build-file
@@ -212,6 +222,9 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 		jshint-disabled: item.jshint-disabled and true or false
 		jshint-params: item.jshint-params and item.jshint-params or null
 		jshint-exclude: item.jshint-exclude and item.jshint-exclude or []
+
+	if item.type is \liveify
+		params.jshint-exclude.push path.join item.path, 'src/**/*.ls'
 
 	if item.jshint-relative-exclude
 		for exclude in item.jshint-relative-exclude
@@ -231,7 +244,7 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 	gulp.task \clean-scripts- + name,
 		let name, params then (cb) !-> scripts-clean-task name, params, cb
 
-	if item.type is \browserify
+	if item.type is \browserify or item.type is \liveify
 		gulp.task \scripts- + name, pre-build-tasks,
 			let name, params then -> scripts-build-browserify-task name, params
 	else
