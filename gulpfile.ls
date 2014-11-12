@@ -12,7 +12,7 @@ require! {
 	yargs : {argv}
 	\merge-stream : merge
 
-	\gulp-clean : clean
+	del
 	\gulp.spritesmith : spritesmith
 	\gulp-task-listing : tasks
 	\gulp-less : less
@@ -52,17 +52,13 @@ init-task-iteration = (name, item, init-func) !->
 clean-data = pkg.gulp.clean or []
 dist-clean-data = pkg.gulp.distclean or []
 
-clean-task = (list) ->
-	return gulp if list.length <= 0
-	gulp.src list .pipe clean force: true
-
 gulp.task \clean , [
 	\clean-sprites
 	\clean-styles
 	\clean-scripts
-], -> clean-task clean-data
+], (cb) !-> del clean-data , cb
 
-gulp.task \distclean , [ \clean ], -> clean-task dist-clean-data
+gulp.task \distclean , [ \clean ], (cb) !-> del dist-clean-data , cb
 
 # clean }}}1
 
@@ -73,11 +69,11 @@ sprites-build-tasks = []
 
 sprites-data = pkg.gulp.sprites or {}
 
-sprite-clean-task = (name, sprite-params, params) ->
-	gulp.src [
+sprite-clean-task = (name, sprite-params, params, cb) !->
+	del [
 		path.join params.img-dir, 'build/'
 		path.join params.css-dir, sprite-params.css-name
-	] .pipe clean force: true
+	], cb
 
 sprite-build-task = (name, sprite-params, params) ->
 	sprite-data = gulp.src path.join params.img-dir, 'src/*.png'
@@ -110,7 +106,7 @@ sprite-init-tasks = (name, item, sub-task=false) !->
 
 	gulp.task \clean-sprite- + name,
 		let name, sprite-params, params
-			-> sprite-clean-task name, sprite-params, params
+			(cb) !-> sprite-clean-task name, sprite-params, params, cb
 
 	gulp.task \sprite- + name, pre-build-tasks,
 		let name, sprite-params, params
@@ -134,8 +130,8 @@ styles-build-tasks = []
 
 styles-data = pkg.gulp.styles or {}
 
-styles-clean-task = (name, params) ->
-	gulp.src path.join params.path, 'build/' .pipe clean force: true
+styles-clean-task = (name, params, cb) !->
+	del path.join( params.path, 'build/' ) , cb
 
 styles-build-less-task = (name, params) ->
 	gulp.src path.join params.path, 'src/', params.main-src
@@ -157,7 +153,7 @@ styles-init-tasks = (name, item, sub-task=false) !->
 			pre-build-tasks.push task-name
 
 	gulp.task \clean-styles- + name,
-		let name, params then -> styles-clean-task name, params
+		let name, params then (cb) !-> styles-clean-task name, params, cb
 
 	if item.type is \less
 		gulp.task \styles- + name, pre-build-tasks,
@@ -183,8 +179,8 @@ scripts-build-tasks = []
 
 scripts-data = pkg.gulp.scripts or {}
 
-scripts-clean-task = (name, params) ->
-	gulp.src path.join params.path, 'build/' .pipe clean force: true
+scripts-clean-task = (name, params, cb) !->
+	del path.join( params.path, 'build/' ) , cb
 
 scripts-jshint-task = (name, params) ->
 	src = [ path.join params.path, 'src/**/*.js' ]
@@ -233,7 +229,7 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 		pre-build-tasks.push \scripts- + name + \-jshint
 
 	gulp.task \clean-scripts- + name,
-		let name, params then -> scripts-clean-task name, params
+		let name, params then (cb) !-> scripts-clean-task name, params, cb
 
 	if item.type is \browserify
 		gulp.task \scripts- + name, pre-build-tasks,
