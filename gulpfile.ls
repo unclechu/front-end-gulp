@@ -200,6 +200,9 @@ scripts-build-browserify-task = (name, params) ->
 	if params.type is \liveify
 		options.transform = [ \liveify ]
 		options.extensions = [ \.ls ]
+		options.shim.prelude =
+			path: './node_modules/prelude-ls'
+			exports: ''
 
 	gulp.src path.join( params.path, 'src/', params.main-src ), read: false
 		.pipe browserify options
