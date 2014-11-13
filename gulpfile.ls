@@ -17,6 +17,7 @@ require! {
 	\gulp-task-listing : tasks
 	\gulp-less : less
 	\gulp-stylus : stylus
+	nib
 	\gulp-if : gulpif
 	\gulp-rename : rename
 	\gulp-browserify : browserify
@@ -136,9 +137,14 @@ styles-clean-task = (name, params, cb) !->
 	del path.join( params.path, 'build/' ) , cb
 
 styles-build-task = (name, params) ->
+	options = compress: production
+
+	if params.type is \stylus
+		options.use = nib()
+
 	gulp.src path.join params.path, 'src/', params.main-src
-		.pipe gulpif params.type is \less , less compress: production
-		.pipe gulpif params.type is \stylus , stylus compress: production
+		.pipe gulpif params.type is \less , less options
+		.pipe gulpif params.type is \stylus , stylus options
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest path.join params.path, 'build/'
