@@ -16,6 +16,7 @@ require! {
 	\gulp.spritesmith : spritesmith
 	\gulp-task-listing : tasks
 	\gulp-less : less
+	\gulp-sourcemaps : sourcemaps
 	\gulp-stylus : stylus
 	nib
 	\gulp-if : gulpif
@@ -141,9 +142,15 @@ styles-build-task = (name, params) ->
 
 	if params.type is \stylus
 		options.use = nib()
+		options.sourcemap =
+			inline: true
+			sourceRoot: '.'
+			basePath: path.join params.path, \src
 
 	gulp.src path.join params.path, 'src/', params.main-src
+		.pipe gulpif params.type is \less , sourcemaps.init!
 		.pipe gulpif params.type is \less , less options
+		.pipe gulpif params.type is \less , sourcemaps.write!
 		.pipe gulpif params.type is \stylus , stylus options
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
