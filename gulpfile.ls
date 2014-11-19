@@ -136,7 +136,7 @@ styles-watch-tasks = []
 styles-data = pkg.gulp.styles or {}
 
 styles-clean-task = (name, params, cb) !->
-	del path.join( params.path, 'build/' ) , cb
+	del path.join( params.path, \build ) , cb
 
 styles-build-task = (name, params) ->
 	options = compress: production
@@ -148,14 +148,14 @@ styles-build-task = (name, params) ->
 			sourceRoot: '.'
 			basePath: path.join params.path, \src
 
-	gulp.src path.join params.path, 'src/', params.main-src
+	gulp.src path.join params.path, \src , params.main-src
 		.pipe gulpif params.type is \less , sourcemaps.init!
 		.pipe gulpif params.type is \less , less options
 		.pipe gulpif params.type is \less , sourcemaps.write!
 		.pipe gulpif params.type is \stylus , stylus options
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
-		.pipe gulp.dest path.join params.path, 'build/'
+		.pipe gulp.dest path.join params.path, \build
 
 styles-init-tasks = (name, item, sub-task=false) !->
 	params =
@@ -188,7 +188,7 @@ styles-init-tasks = (name, item, sub-task=false) !->
 
 	# watcher
 
-	src-path = path.join params.path , 'src/'
+	src-path = path.join params.path , \src
 
 	if item.watchFiles
 		watch-files = item.watchFiles
