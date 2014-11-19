@@ -131,6 +131,7 @@ gulp.task \sprites , sprites-build-tasks
 
 styles-clean-tasks = []
 styles-build-tasks = []
+styles-watch-tasks = []
 
 styles-data = pkg.gulp.styles or {}
 
@@ -160,32 +161,53 @@ styles-init-tasks = (name, item, sub-task=false) !->
 	params =
 		type: item.type
 		path: item.path
-		main-src: item.main-src
-		build-file: item.build-file
+		main-src: item.mainSrc
+		build-file: item.buildFile
 
-	pre-build-tasks = [\clean-styles- + name]
+	clean-task-name = \clean-styles- + name
+	build-task-name = \styles- + name
+	watch-task-name = \styles- + name + \-watch
 
-	if item.build-deps then
-		for task-name in item.build-deps
+	pre-build-tasks = [ clean-task-name ]
+
+	if item.buildDeps then
+		for task-name in item.buildDeps
 			pre-build-tasks.push task-name
 
-	gulp.task \clean-styles- + name,
+	gulp.task clean-task-name,
 		let name, params then (cb) !-> styles-clean-task name, params, cb
 
 	if item.type is \less or item.type is \stylus
-		gulp.task \styles- + name, pre-build-tasks,
+		gulp.task build-task-name, pre-build-tasks,
 			let name, params then -> styles-build-task name, params
 	else
 		throw new Error "Unknown styles type for \"#name\" task."
 
-	styles-clean-tasks.push \clean-styles- + name
-	if not sub-task then styles-build-tasks.push \styles- + name
+	styles-clean-tasks.push clean-task-name
+	if not sub-task then styles-build-tasks.push build-task-name
+
+	# watcher
+
+	src-path = path.join params.path , 'src/'
+
+	if item.watchFiles
+		watch-files = item.watchFiles
+	else if item.type is \less
+		watch-files = path.join src-path, '**/*.less'
+	else if item.type is \stylus
+		watch-files =
+			path.join src-path, '**/*.styl'
+			path.join src-path, '**/*.stylus'
+
+	gulp.task watch-task-name , !-> gulp.watch watch-files , [ build-task-name ]
+	if not sub-task then styles-watch-tasks.push watch-task-name
 
 for name, item of styles-data
 	init-task-iteration name, item, styles-init-tasks
 
 gulp.task \clean-styles , styles-clean-tasks
 gulp.task \styles , styles-build-tasks
+gulp.task \styles-watch , styles-watch-tasks
 
 # styles }}}1
 
@@ -279,6 +301,10 @@ gulp.task \clean-scripts , scripts-clean-tasks
 gulp.task \scripts , scripts-build-tasks
 
 # scripts }}}1
+
+gulp.task \watch [
+	\styles-watch
+]
 
 gulp.task \default [
 	\sprites
