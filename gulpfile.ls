@@ -208,7 +208,7 @@ styles-build-task = (name, params, cb) !->
 		source-maps-as-plugin = true
 
 	gulp.src path.join params.path, \src, params.main-src
-		.pipe gulpif ignore-errors, plumber!
+		.pipe gulpif ignore-errors, plumber errorHandler: cb
 		.pipe gulpif source-maps-as-plugin, sourcemaps.init!
 		.pipe gulpif params.type is \less, less options
 		.pipe gulpif source-maps-as-plugin, sourcemaps.write!
@@ -216,7 +216,7 @@ styles-build-task = (name, params, cb) !->
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest path.join params.path, \build
-	cb!
+		.pipe gcb cb
 
 styles-init-tasks = (name, item, sub-task=false) !->
 	params =
@@ -298,7 +298,7 @@ scripts-jshint-task = (name, params, cb) !->
 	for exclude in params.jshint-exclude then src.push \! + exclude
 	gulp.src src .pipe jshint params.jshint-params
 		.pipe jshint.reporter stylish
-	cb!
+		.pipe gcb cb
 
 scripts-build-browserify-task = (name, params, cb) !->
 	options =
@@ -318,13 +318,13 @@ scripts-build-browserify-task = (name, params, cb) !->
 			exports: ''
 
 	gulp.src path.join( params.path, \src, params.main-src ), read: false
-		.pipe gulpif ignore-errors, plumber!
+		.pipe gulpif ignore-errors, plumber errorHandler: cb
 		.pipe browserify options
 		.pipe gulpif production, uglify preserveComments: \some
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest path.join params.path, \build
-	cb!
+		.pipe gcb cb
 
 scripts-init-tasks = (name, item, sub-task=false) !->
 	# parse relative paths in "shim"
