@@ -141,16 +141,22 @@ styles-clean-task = (name, params, cb) !->
 styles-build-task = (name, params) ->
 	options = compress: production
 
+	source-maps = false
+	if params.source-maps is true
+		source-maps = true
+	else if not production and params.source-maps is not false
+		source-maps = true
+
 	source-maps-as-plugin = false
 
 	if params.type is \stylus
 		options.use = nib()
-		if not production
+		if source-maps
 			options.sourcemap =
 				inline: true
 				sourceRoot: '.'
 				basePath: path.join params.path, \src
-	else if params.type is \less and not production
+	else if params.type is \less and source-maps
 		source-maps-as-plugin = true
 
 	gulp.src path.join params.path, \src , params.main-src
@@ -168,6 +174,9 @@ styles-init-tasks = (name, item, sub-task=false) !->
 		path: item.path
 		main-src: item.mainSrc
 		build-file: item.buildFile
+
+	if typeof item.sourceMaps is \boolean
+		params.source-maps = item.sourceMaps
 
 	clean-task-name = \clean-styles- + name
 	build-task-name = \styles- + name
@@ -207,7 +216,7 @@ styles-init-tasks = (name, item, sub-task=false) !->
 	add-to-list = false
 	if item.addToWatchersList is true
 		add-to-list = true
-	if not sub-task and item.addToWatchersList is not false
+	else if not sub-task and item.addToWatchersList is not false
 		add-to-list = true
 
 	gulp.task watch-task-name , !-> gulp.watch watch-files , [ build-task-name ]
