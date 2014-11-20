@@ -12,6 +12,7 @@ require! {
 	\gulp-plumber : plumber
 	yargs : {argv}
 	\merge-stream : merge
+	\gulp-callback : gcb
 
 	del
 	\gulp.spritesmith : spritesmith
@@ -95,28 +96,46 @@ gulp.task \distclean , [ \clean ], (cb) !-> del dist-clean-data , cb
 
 sprites-clean-tasks = []
 sprites-build-tasks = []
+sprites-watch-tasks = []
 
 sprites-data = pkg.gulp.sprites or {}
 
 sprite-clean-task = (name, sprite-params, params, cb) !->
 	del [
-		path.join params.img-dir, 'build/'
+		path.join params.img-dir, \build
 		path.join params.css-dir, sprite-params.css-name
 	], cb
 
-sprite-build-task = (name, sprite-params, params) ->
+sprite-build-task = (name, sprite-params, params, cb) !->
 	sprite-data = gulp.src path.join params.img-dir, 'src/*.png'
 		.pipe spritesmith sprite-params
-	img = sprite-data.img.pipe gulp.dest path.join params.img-dir, 'build/'
-	css = sprite-data.css.pipe gulp.dest params.css-dir
-	[ img, css ]
+
+	ready =
+		img: false
+		css: false
+
+	postCb = !->
+		return if not ready.img or not ready.css
+		cb!
+
+	sprite-data.img
+		.pipe gulp.dest path.join params.img-dir, \build
+		.pipe gcb !->
+			ready.img = true
+			postCb!
+
+	sprite-data.css
+		.pipe gulp.dest params.css-dir
+		.pipe gcb !->
+			ready.css = true
+			postCb!
 
 sprite-init-tasks = (name, item, sub-task=false) !->
 	img-name = item.img-name or \sprite.png
 	sprite-params =
 		img-name: img-name
-		css-name: item.css-name or name + '.css'
-		img-path: path.join item.img-path-prefix, 'build/', img-name
+		css-name: item.css-name or name + \.css
+		img-path: path.join item.img-path-prefix, \build, img-name
 		padding: item.padding or 1
 		img-opts: format: \png
 		css-var-map: let name then (s) !->
@@ -127,28 +146,32 @@ sprite-init-tasks = (name, item, sub-task=false) !->
 		img-dir: item.img-dir
 		css-dir: item.css-dir
 
-	pre-build-tasks = [\clean-sprite- + name]
+	clean-task-name = \clean-sprite- + name
+	build-task-name = \sprite- + name
+
+	pre-build-tasks = [ clean-task-name ]
 
 	if item.build-deps then
 		for task-name in item.build-deps
 			pre-build-tasks.push task-name
 
-	gulp.task \clean-sprite- + name,
+	gulp.task clean-task-name,
 		let name, sprite-params, params
 			(cb) !-> sprite-clean-task name, sprite-params, params, cb
 
-	gulp.task \sprite- + name, pre-build-tasks,
+	gulp.task build-task-name, pre-build-tasks,
 		let name, sprite-params, params
-			-> merge.apply null, sprite-build-task name, sprite-params, params
+			(cb) !-> sprite-build-task name, sprite-params, params, cb
 
-	sprites-clean-tasks.push \clean-sprite- + name
-	if not sub-task then sprites-build-tasks.push \sprite- + name
+	sprites-clean-tasks.push clean-task-name
+	if not sub-task then sprites-build-tasks.push build-task-name
 
 for name, item of sprites-data
 	init-task-iteration name, item, sprite-init-tasks
 
 gulp.task \clean-sprites , sprites-clean-tasks
 gulp.task \sprites , sprites-build-tasks
+gulp.task \sprites-watch , sprites-watch-tasks
 
 # sprites }}}1
 
