@@ -141,17 +141,22 @@ styles-clean-task = (name, params, cb) !->
 styles-build-task = (name, params) ->
 	options = compress: production
 
+	source-maps-as-plugin = false
+
 	if params.type is \stylus
 		options.use = nib()
-		options.sourcemap =
-			inline: true
-			sourceRoot: '.'
-			basePath: path.join params.path, \src
+		if not production
+			options.sourcemap =
+				inline: true
+				sourceRoot: '.'
+				basePath: path.join params.path, \src
+	else if params.type is \less and not production
+		source-maps-as-plugin = true
 
 	gulp.src path.join params.path, \src , params.main-src
-		.pipe gulpif params.type is \less , sourcemaps.init!
+		.pipe gulpif source-maps-as-plugin , sourcemaps.init!
 		.pipe gulpif params.type is \less , less options
-		.pipe gulpif params.type is \less , sourcemaps.write!
+		.pipe gulpif source-maps-as-plugin , sourcemaps.write!
 		.pipe gulpif params.type is \stylus , stylus options
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
