@@ -239,7 +239,7 @@ scripts-build-tasks = []
 scripts-data = pkg.gulp.scripts or {}
 
 scripts-clean-task = (name, params, cb) !->
-	del path.join( params.path, 'build/' ) , cb
+	del path.join( params.path, \build ) , cb
 
 scripts-jshint-task = (name, params) ->
 	src = [ path.join params.path, 'src/**/*.js' ]
@@ -264,19 +264,19 @@ scripts-build-browserify-task = (name, params) ->
 			path: './node_modules/prelude-ls'
 			exports: ''
 
-	gulp.src path.join( params.path, 'src/', params.main-src ), read: false
+	gulp.src path.join( params.path, \src, params.main-src ), read: false
 		.pipe browserify options
 		.pipe gulpif production, uglify preserveComments: \some
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
-		.pipe gulp.dest path.join params.path, 'build/'
+		.pipe gulp.dest path.join params.path, \build
 
 scripts-init-tasks = (name, item, sub-task=false) !->
 	# parse relative paths in "shim"
 	if item.shim then for key, shim-item of item.shim
 		for param-name, val of shim-item
 			if param-name is \relativePath
-				shim-item.path = path.join item.path, 'src/', val
+				shim-item.path = path.join item.path, \src, val
 				delete shim-item[param-name]
 
 	params =
@@ -294,33 +294,37 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 
 	if item.jshint-relative-exclude
 		for exclude in item.jshint-relative-exclude
-			params.jshint-exclude.push path.join item.path, 'src/', exclude
+			params.jshint-exclude.push path.join item.path, \src, exclude
 
 	if typeof item.debug is \boolean
 		params.debug = item.debug
 
-	pre-build-tasks = [\clean-scripts- + name]
+	clean-task-name = \clean-scripts- + name
+	build-task-name = \scripts- + name
+	jshint-task-name = build-task-name + \-jshint
+
+	pre-build-tasks = [ clean-task-name ]
 
 	if item.build-deps then
 		for task-name in item.build-deps
 			pre-build-tasks.push task-name
 
 	if not params.jshint-disabled
-		gulp.task \scripts- + name + \-jshint,
+		gulp.task jshint-task-name,
 			let name, params then -> scripts-jshint-task name, params
-		pre-build-tasks.push \scripts- + name + \-jshint
+		pre-build-tasks.push jshint-task-name
 
-	gulp.task \clean-scripts- + name,
+	gulp.task clean-task-name,
 		let name, params then (cb) !-> scripts-clean-task name, params, cb
 
 	if item.type is \browserify or item.type is \liveify
-		gulp.task \scripts- + name, pre-build-tasks,
+		gulp.task build-task-name, pre-build-tasks,
 			let name, params then -> scripts-build-browserify-task name, params
 	else
 		throw new Error "Unknown scripts type for \"#name\" task."
 
-	scripts-clean-tasks.push \clean-scripts- + name
-	if not sub-task then scripts-build-tasks.push \scripts- + name
+	scripts-clean-tasks.push clean-task-name
+	if not sub-task then scripts-build-tasks.push build-task-name
 
 for name, item of scripts-data
 	init-task-iteration name, item, scripts-init-tasks
