@@ -250,7 +250,12 @@ scripts-jshint-task = (name, params) ->
 scripts-build-browserify-task = (name, params) ->
 	options =
 		shim: params.shim
-		debug: not production
+		debug: false
+
+	if params.debug is true
+		options.debug = true
+	else if not production and params.debug is not false
+		options.debug = true
 
 	if params.type is \liveify
 		options.transform = [ \liveify ]
@@ -290,6 +295,9 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 	if item.jshint-relative-exclude
 		for exclude in item.jshint-relative-exclude
 			params.jshint-exclude.push path.join item.path, 'src/', exclude
+
+	if typeof item.debug is \boolean
+		params.debug = item.debug
 
 	pre-build-tasks = [\clean-scripts- + name]
 
