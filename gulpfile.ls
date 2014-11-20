@@ -204,8 +204,14 @@ styles-init-tasks = (name, item, sub-task=false) !->
 			path.join src-path, '**/*.styl'
 			path.join src-path, '**/*.stylus'
 
+	add-to-list = false
+	if item.addToWatchersList is true
+		add-to-list = true
+	if not sub-task and item.addToWatchersList is not false
+		add-to-list = true
+
 	gulp.task watch-task-name , !-> gulp.watch watch-files , [ build-task-name ]
-	if not sub-task then styles-watch-tasks.push watch-task-name
+	if add-to-list then styles-watch-tasks.push watch-task-name
 
 for name, item of styles-data
 	init-task-iteration name, item, styles-init-tasks
