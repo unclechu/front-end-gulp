@@ -9,6 +9,7 @@ require! {
 	path
 
 	gulp
+	\gulp-plumber : plumber
 	yargs : {argv}
 	\merge-stream : merge
 
@@ -34,6 +35,9 @@ gulp.task \help , tasks
 
 production = argv.production?
 
+# ignore errors, will be enabled anyway by any watcher
+ignore-errors = argv[\ignore-errors]?
+
 # helpers {{{1
 
 rename-build-file = (build-path, main-src, build-file) !->
@@ -48,6 +52,27 @@ init-task-iteration = (name, item, init-func) !->
 		sub-task-params.sub-task = null
 		for key, val of sub-task then sub-task-params[key] = val
 		init-func name + \- + sub-task-name, sub-task-params, true
+
+init-watcher-task = (
+	sub-task
+	src-path
+	watch-files
+	add-to-watchers-list
+	watch-task-name
+	watchers-list
+	build-task-name
+) !->
+	add-to-list = false
+	if add-to-watchers-list is true
+		add-to-list = true
+	else if not sub-task and add-to-watchers-list is not false
+		add-to-list = true
+
+	gulp.task watch-task-name , !->
+		ignore-errors := true
+		gulp.watch watch-files , [ build-task-name ]
+
+	if add-to-list then watchers-list.push watch-task-name
 
 # helpers }}}1
 
@@ -138,7 +163,7 @@ styles-data = pkg.gulp.styles or {}
 styles-clean-task = (name, params, cb) !->
 	del path.join( params.path, \build ) , cb
 
-styles-build-task = (name, params) ->
+styles-build-task = (name, params, cb) !->
 	options = compress: production
 
 	source-maps = false
@@ -159,14 +184,16 @@ styles-build-task = (name, params) ->
 	else if params.type is \less and source-maps
 		source-maps-as-plugin = true
 
-	gulp.src path.join params.path, \src , params.main-src
-		.pipe gulpif source-maps-as-plugin , sourcemaps.init!
-		.pipe gulpif params.type is \less , less options
-		.pipe gulpif source-maps-as-plugin , sourcemaps.write!
-		.pipe gulpif params.type is \stylus , stylus options
+	gulp.src path.join params.path, \src, params.main-src
+		.pipe gulpif ignore-errors, plumber!
+		.pipe gulpif source-maps-as-plugin, sourcemaps.init!
+		.pipe gulpif params.type is \less, less options
+		.pipe gulpif source-maps-as-plugin, sourcemaps.write!
+		.pipe gulpif params.type is \stylus, stylus options
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest path.join params.path, \build
+	cb!
 
 styles-init-tasks = (name, item, sub-task=false) !->
 	params =
@@ -180,7 +207,7 @@ styles-init-tasks = (name, item, sub-task=false) !->
 
 	clean-task-name = \clean-styles- + name
 	build-task-name = \styles- + name
-	watch-task-name = \styles- + name + \-watch
+	watch-task-name = build-task-name + \-watch
 
 	pre-build-tasks = [ clean-task-name ]
 
@@ -193,7 +220,7 @@ styles-init-tasks = (name, item, sub-task=false) !->
 
 	if item.type is \less or item.type is \stylus
 		gulp.task build-task-name, pre-build-tasks,
-			let name, params then -> styles-build-task name, params
+			let name, params then (cb) !-> styles-build-task name, params, cb
 	else
 		throw new Error "Unknown styles type for \"#name\" task."
 
@@ -202,9 +229,9 @@ styles-init-tasks = (name, item, sub-task=false) !->
 
 	# watcher
 
-	src-path = path.join params.path , \src
+	src-path = path.join params.path, \src
 
-	if item.watchFiles
+	if item.watchFiles?
 		watch-files = item.watchFiles
 	else if item.type is \less
 		watch-files = path.join src-path, '**/*.less'
@@ -213,14 +240,15 @@ styles-init-tasks = (name, item, sub-task=false) !->
 			path.join src-path, '**/*.styl'
 			path.join src-path, '**/*.stylus'
 
-	add-to-list = false
-	if item.addToWatchersList is true
-		add-to-list = true
-	else if not sub-task and item.addToWatchersList is not false
-		add-to-list = true
-
-	gulp.task watch-task-name , !-> gulp.watch watch-files , [ build-task-name ]
-	if add-to-list then styles-watch-tasks.push watch-task-name
+	init-watcher-task(
+		sub-task
+		params.path
+		watch-files
+		item.addToWatchersList
+		watch-task-name
+		styles-watch-tasks
+		build-task-name
+	)
 
 for name, item of styles-data
 	init-task-iteration name, item, styles-init-tasks
@@ -235,19 +263,21 @@ gulp.task \styles-watch , styles-watch-tasks
 
 scripts-clean-tasks = []
 scripts-build-tasks = []
+scripts-watch-tasks = []
 
 scripts-data = pkg.gulp.scripts or {}
 
 scripts-clean-task = (name, params, cb) !->
 	del path.join( params.path, \build ) , cb
 
-scripts-jshint-task = (name, params) ->
+scripts-jshint-task = (name, params, cb) !->
 	src = [ path.join params.path, 'src/**/*.js' ]
 	for exclude in params.jshint-exclude then src.push \! + exclude
 	gulp.src src .pipe jshint params.jshint-params
 		.pipe jshint.reporter stylish
+	cb!
 
-scripts-build-browserify-task = (name, params) ->
+scripts-build-browserify-task = (name, params, cb) !->
 	options =
 		shim: params.shim
 		debug: false
@@ -265,11 +295,13 @@ scripts-build-browserify-task = (name, params) ->
 			exports: ''
 
 	gulp.src path.join( params.path, \src, params.main-src ), read: false
+		.pipe gulpif ignore-errors, plumber!
 		.pipe browserify options
 		.pipe gulpif production, uglify preserveComments: \some
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest path.join params.path, \build
+	cb!
 
 scripts-init-tasks = (name, item, sub-task=false) !->
 	# parse relative paths in "shim"
@@ -302,6 +334,7 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 	clean-task-name = \clean-scripts- + name
 	build-task-name = \scripts- + name
 	jshint-task-name = build-task-name + \-jshint
+	watch-task-name = build-task-name + \-watch
 
 	pre-build-tasks = [ clean-task-name ]
 
@@ -311,7 +344,7 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 
 	if not params.jshint-disabled
 		gulp.task jshint-task-name,
-			let name, params then -> scripts-jshint-task name, params
+			let name, params then (cb) !-> scripts-jshint-task name, params, cb
 		pre-build-tasks.push jshint-task-name
 
 	gulp.task clean-task-name,
@@ -319,23 +352,49 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 
 	if item.type is \browserify or item.type is \liveify
 		gulp.task build-task-name, pre-build-tasks,
-			let name, params then -> scripts-build-browserify-task name, params
+			let name, params
+				(cb) !-> scripts-build-browserify-task name, params, cb
 	else
 		throw new Error "Unknown scripts type for \"#name\" task."
 
 	scripts-clean-tasks.push clean-task-name
 	if not sub-task then scripts-build-tasks.push build-task-name
 
+	# watcher
+
+	src-path = path.join params.path, \src
+
+	if item.watchFiles?
+		watch-files = item.watchFiles
+	else if item.type is \browserify
+		watch-files = path.join src-path, '**/*.js'
+	else if item.type is \liveify
+		watch-files =
+			path.join src-path, '**/*.ls'
+			path.join src-path, '**/*.js'
+
+	init-watcher-task(
+		sub-task
+		params.path
+		watch-files
+		item.addToWatchersList
+		watch-task-name
+		scripts-watch-tasks
+		build-task-name
+	)
+
 for name, item of scripts-data
 	init-task-iteration name, item, scripts-init-tasks
 
 gulp.task \clean-scripts , scripts-clean-tasks
 gulp.task \scripts , scripts-build-tasks
+gulp.task \scripts-watch , scripts-watch-tasks
 
 # scripts }}}1
 
 gulp.task \watch [
 	\styles-watch
+	\scripts-watch
 ]
 
 gulp.task \default [
