@@ -305,7 +305,12 @@ scripts-watch-tasks = []
 scripts-data = pkg.gulp.scripts or {}
 
 scripts-clean-task = (name, params, cb) !->
-	del path.join( params.path, \build ) , cb
+	if params.dest-dir?
+		to-remove = path.join params.dest-dir, params.build-file
+	else
+		to-remove = path.join params.path, \build
+
+	del to-remove, force: true, cb
 
 scripts-jshint-task = (name, params, cb) !->
 	src = [ path.join params.path, 'src/**/*.js' ]
@@ -333,13 +338,16 @@ scripts-build-browserify-task = (name, params, cb) !->
 			path: './node_modules/prelude-ls'
 			exports: ''
 
+	dest-dir = path.join params.path, \build
+	if params.dest-dir? then dest-dir = params.dest-dir
+
 	gulp.src path.join( params.path, \src, params.main-src ), read: false
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
 		.pipe browserify options
 		.pipe gulpif production, uglify preserveComments: \some
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
-		.pipe gulp.dest path.join params.path, \build
+		.pipe gulp.dest dest-dir
 		.pipe gcb cb
 
 scripts-init-tasks = (name, item, sub-task=false) !->
@@ -353,6 +361,7 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 	params =
 		type: item.type
 		path: item.path
+		dest-dir: item.destDir or null
 		main-src: item.mainSrc
 		build-file: item.buildFile
 		shim: item.shim or {}
