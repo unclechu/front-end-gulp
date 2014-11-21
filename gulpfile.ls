@@ -214,7 +214,7 @@ styles-build-task = (name, params, cb) !->
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest path.join params.path, \build
-		.pipe gcb cb
+		.end cb
 
 styles-init-tasks = (name, item, sub-task=false) !->
 	params =
@@ -296,7 +296,8 @@ scripts-jshint-task = (name, params, cb) !->
 	gulp.src src
 		.pipe jshint params.jshint-params
 		.pipe jshint.reporter stylish
-		.on \end, cb
+		.pipe rename \x # hack for end callback
+		.end cb
 
 scripts-build-browserify-task = (name, params, cb) !->
 	options =
@@ -322,7 +323,7 @@ scripts-build-browserify-task = (name, params, cb) !->
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest path.join params.path, \build
-		.pipe gcb cb
+		.end cb
 
 scripts-init-tasks = (name, item, sub-task=false) !->
 	# parse relative paths in "shim"
