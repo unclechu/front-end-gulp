@@ -99,10 +99,14 @@ sprites-build-tasks = []
 sprites-data = pkg.gulp.sprites or {}
 
 sprite-clean-task = (name, sprite-params, params, cb) !->
-	del [
-		path.join params.img-dir, \build
-		path.join params.css-dir, sprite-params.css-name
-	], cb
+	to-remove = [ path.join params.css-dir, sprite-params.css-name ]
+
+	if params.img-dest-dir?
+		to-remove.push path.join params.img-dest-dir, sprite-params.img-name
+	else
+		to-remove.push path.join params.img-dir, \build
+
+	del to-remove, force: true, cb
 
 sprite-build-task = (name, sprite-params, params, cb) !->
 	sprite-data = gulp.src path.join params.img-dir, 'src/*.png'
@@ -117,8 +121,11 @@ sprite-build-task = (name, sprite-params, params, cb) !->
 		return if not ready.img or not ready.css
 		cb!
 
+	img-dest = path.join params.img-dir, \build
+	if params.img-dest-dir? then img-dest = params.img-dest-dir
+
 	sprite-data.img
-		.pipe gulp.dest path.join params.img-dir, \build
+		.pipe gulp.dest img-dest
 		.pipe gcb !->
 			ready.img = true
 			postCb!
@@ -138,12 +145,13 @@ sprite-init-tasks = (name, item, sub-task=false) !->
 		padding: item.padding or 1
 		img-opts: format: \png
 		css-var-map: let name then (s) !->
-			s.name = \sprite- + name + \- + s.name;
+			s.name = \sprite- + name + \- + s.name
 		algorithm: item.algorithm or \top-down
 
 	params =
 		img-dir: item.imgDir
 		css-dir: item.cssDir
+		img-dest-dir: item.imgDestDir or null
 
 	clean-task-name = \clean-sprite- + name
 	build-task-name = \sprite- + name
