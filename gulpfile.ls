@@ -56,7 +56,6 @@ init-task-iteration = (name, item, init-func) !->
 
 init-watcher-task = (
 	sub-task
-	src-path
 	watch-files
 	add-to-watchers-list
 	watch-task-name
@@ -96,7 +95,6 @@ gulp.task \distclean , [ \clean ], (cb) !-> del dist-clean-data , cb
 
 sprites-clean-tasks = []
 sprites-build-tasks = []
-sprites-watch-tasks = []
 
 sprites-data = pkg.gulp.sprites or {}
 
@@ -108,6 +106,7 @@ sprite-clean-task = (name, sprite-params, params, cb) !->
 
 sprite-build-task = (name, sprite-params, params, cb) !->
 	sprite-data = gulp.src path.join params.img-dir, 'src/*.png'
+		.pipe gulpif ignore-errors, plumber errorHandler: cb
 		.pipe spritesmith sprite-params
 
 	ready =
@@ -131,11 +130,11 @@ sprite-build-task = (name, sprite-params, params, cb) !->
 			postCb!
 
 sprite-init-tasks = (name, item, sub-task=false) !->
-	img-name = item.img-name or \sprite.png
+	img-name = item.imgName or \sprite.png
 	sprite-params =
 		img-name: img-name
-		css-name: item.css-name or name + \.css
-		img-path: path.join item.img-path-prefix, \build, img-name
+		css-name: item.cssName or name + \.css
+		img-path: path.join item.imgPathPrefix, \build, img-name
 		padding: item.padding or 1
 		img-opts: format: \png
 		css-var-map: let name then (s) !->
@@ -143,16 +142,16 @@ sprite-init-tasks = (name, item, sub-task=false) !->
 		algorithm: item.algorithm or \top-down
 
 	params =
-		img-dir: item.img-dir
-		css-dir: item.css-dir
+		img-dir: item.imgDir
+		css-dir: item.cssDir
 
 	clean-task-name = \clean-sprite- + name
 	build-task-name = \sprite- + name
 
 	pre-build-tasks = [ clean-task-name ]
 
-	if item.build-deps then
-		for task-name in item.build-deps
+	if item.buildDeps then
+		for task-name in item.buildDeps
 			pre-build-tasks.push task-name
 
 	gulp.task clean-task-name,
@@ -171,7 +170,6 @@ for name, item of sprites-data
 
 gulp.task \clean-sprites , sprites-clean-tasks
 gulp.task \sprites , sprites-build-tasks
-gulp.task \sprites-watch , sprites-watch-tasks
 
 # sprites }}}1
 
@@ -265,7 +263,6 @@ styles-init-tasks = (name, item, sub-task=false) !->
 
 	init-watcher-task(
 		sub-task
-		params.path
 		watch-files
 		item.addToWatchersList
 		watch-task-name
@@ -398,7 +395,6 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 
 	init-watcher-task(
 		sub-task
-		params.path
 		watch-files
 		item.addToWatchersList
 		watch-task-name
