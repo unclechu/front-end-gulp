@@ -334,18 +334,18 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 	params =
 		type: item.type
 		path: item.path
-		main-src: item.main-src
-		build-file: item.build-file
+		main-src: item.mainSrc
+		build-file: item.buildFile
 		shim: item.shim or {}
-		jshint-disabled: item.jshint-disabled and true or false
-		jshint-params: item.jshint-params and item.jshint-params or null
-		jshint-exclude: item.jshint-exclude and item.jshint-exclude or []
+		jshint-disabled: item.jshintDisabled and true or false
+		jshint-params: item.jshintParams and item.jshintParams or null
+		jshint-exclude: item.jshintExclude and item.jshintExclude or []
 
 	if item.type is \liveify
 		params.jshint-exclude.push path.join item.path, 'src/**/*.ls'
 
-	if item.jshint-relative-exclude
-		for exclude in item.jshint-relative-exclude
+	if item.jshintRelativeExclude
+		for exclude in item.jshintRelativeExclude
 			params.jshint-exclude.push path.join item.path, \src, exclude
 
 	if typeof item.debug is \boolean
@@ -358,8 +358,8 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 
 	pre-build-tasks = [ clean-task-name ]
 
-	if item.build-deps then
-		for task-name in item.build-deps
+	if item.buildDeps then
+		for task-name in item.buildDeps
 			pre-build-tasks.push task-name
 
 	if not params.jshint-disabled
