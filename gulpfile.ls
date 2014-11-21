@@ -190,7 +190,12 @@ styles-watch-tasks = []
 styles-data = pkg.gulp.styles or {}
 
 styles-clean-task = (name, params, cb) !->
-	del path.join( params.path, \build ) , cb
+	if params.dest-dir?
+		to-remove = path.join params.dest-dir, params.build-file
+	else
+		to-remove = path.join params.path, \build
+
+	del to-remove, force: true, cb
 
 styles-build-task = (name, params, cb) !->
 	options = compress: production
@@ -213,6 +218,9 @@ styles-build-task = (name, params, cb) !->
 	else if params.type is \less and source-maps
 		source-maps-as-plugin = true
 
+	dest-dir = path.join params.path, \build
+	if params.dest-dir? then dest-dir = params.dest-dir
+
 	gulp.src path.join params.path, \src, params.main-src
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
 		.pipe gulpif source-maps-as-plugin, sourcemaps.init!
@@ -221,8 +229,8 @@ styles-build-task = (name, params, cb) !->
 		.pipe gulpif params.type is \stylus, stylus options
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
-		.pipe gulp.dest path.join params.path, \build
-		.end cb
+		.pipe gulp.dest dest-dir
+		.pipe gcb cb
 
 styles-init-tasks = (name, item, sub-task=false) !->
 	params =
@@ -230,6 +238,7 @@ styles-init-tasks = (name, item, sub-task=false) !->
 		path: item.path
 		main-src: item.mainSrc
 		build-file: item.buildFile
+		dest-dir: item.destDir or null
 
 	if typeof item.sourceMaps is \boolean
 		params.source-maps = item.sourceMaps
@@ -331,7 +340,7 @@ scripts-build-browserify-task = (name, params, cb) !->
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest path.join params.path, \build
-		.end cb
+		.pipe gcb cb
 
 scripts-init-tasks = (name, item, sub-task=false) !->
 	# parse relative paths in "shim"
