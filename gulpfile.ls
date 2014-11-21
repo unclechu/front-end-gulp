@@ -293,9 +293,10 @@ scripts-clean-task = (name, params, cb) !->
 scripts-jshint-task = (name, params, cb) !->
 	src = [ path.join params.path, 'src/**/*.js' ]
 	for exclude in params.jshint-exclude then src.push \! + exclude
-	gulp.src src .pipe jshint params.jshint-params
+	gulp.src src
+		.pipe jshint params.jshint-params
 		.pipe jshint.reporter stylish
-		.pipe gcb cb
+		.on \end, cb
 
 scripts-build-browserify-task = (name, params, cb) !->
 	options =
