@@ -7,6 +7,7 @@
 
 require! {
 	path
+	fs
 
 	gulp
 	\gulp-plumber : plumber
@@ -219,9 +220,18 @@ styles-build-task = (name, params, cb) !->
 		source-maps-as-plugin = true
 
 	dest-dir = path.join params.path, \build
-	if params.dest-dir? then dest-dir = params.dest-dir
+	dest-dir = params.dest-dir if params.dest-dir?
 
-	gulp.src path.join params.path, \src, params.main-src
+	src-dir = path.join params.path, \src
+	src-dir = params.src-dir if params.src-dir?
+
+	src-path = path.join src-dir, params.main-src
+
+	(exists) <-! fs.exists src-path
+
+	throw new Error "Source path '#src-path' is not exists" if not exists
+
+	gulp.src src-path
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
 		.pipe gulpif source-maps-as-plugin, sourcemaps.init!
 		.pipe gulpif params.type is \less, less options
@@ -237,6 +247,7 @@ styles-init-tasks = (name, item, sub-task=false) !->
 		type: item.type
 		path: item.path
 		main-src: item.mainSrc
+		src-dir: item.srcDir or null
 		build-file: item.buildFile
 		dest-dir: item.destDir or null
 
@@ -260,7 +271,7 @@ styles-init-tasks = (name, item, sub-task=false) !->
 		gulp.task build-task-name, pre-build-tasks,
 			let name, params then (cb) !-> styles-build-task name, params, cb
 	else
-		throw new Error "Unknown styles type for \"#name\" task."
+		throw new Error "Unknown styles type for '#name' task."
 
 	styles-clean-tasks.push clean-task-name
 	if not sub-task then styles-build-tasks.push build-task-name
@@ -339,9 +350,18 @@ scripts-build-browserify-task = (name, params, cb) !->
 			exports: ''
 
 	dest-dir = path.join params.path, \build
-	if params.dest-dir? then dest-dir = params.dest-dir
+	dest-dir = params.dest-dir if params.dest-dir?
 
-	gulp.src path.join( params.path, \src, params.main-src ), read: false
+	src-dir = path.join params.path, \src
+	src-dir = params.src-dir if params.src-dir?
+
+	src-path = path.join src-dir, params.main-src
+
+	(exists) <-! fs.exists src-path
+
+	throw new Error "Source path '#src-path' is not exists" if not exists
+
+	gulp.src src-path, read: false
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
 		.pipe browserify options
 		.pipe gulpif production, uglify preserveComments: \some
@@ -361,9 +381,10 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 	params =
 		type: item.type
 		path: item.path
-		dest-dir: item.destDir or null
 		main-src: item.mainSrc
+		src-dir: item.srcDir or null
 		build-file: item.buildFile
+		dest-dir: item.destDir or null
 		shim: item.shim or {}
 		jshint-disabled: item.jshintDisabled and true or false
 		jshint-params: item.jshintParams and item.jshintParams or null
@@ -403,7 +424,7 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 			let name, params
 				(cb) !-> scripts-build-browserify-task name, params, cb
 	else
-		throw new Error "Unknown scripts type for \"#name\" task."
+		throw new Error "Unknown scripts type for '#name' task."
 
 	scripts-clean-tasks.push clean-task-name
 	if not sub-task then scripts-build-tasks.push build-task-name
