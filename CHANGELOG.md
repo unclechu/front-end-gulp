@@ -1,6 +1,12 @@
 Changelog
 =========
 
+r10 / 2015-01-08
+----------------
+
+1. Added "shim" option support for "stylus" styles tasks as array of paths to
+   modules that return plugin callback (like "nib").
+
 r9 / 2015-01-06
 ---------------
 

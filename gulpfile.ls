@@ -1,5 +1,5 @@
 /**
- * @version r9
+ * @version r10
  * @author Viacheslav Lotsmanov
  * @license GNU/GPLv3 (https://github.com/unclechu/web-front-end-gulp-template/blob/master/LICENSE)
  * @see {@link https://github.com/unclechu/web-front-end-gulp-template|GitHub}
@@ -210,7 +210,10 @@ styles-build-task = (name, params, cb) !->
 	source-maps-as-plugin = false
 
 	if params.type is \stylus
-		options.use = nib()
+		use = [nib()]
+		if params.shim? then for module-path in params.shim
+			use = use ++ require path.join process.cwd!, module-path
+		options.use = use
 		if source-maps
 			options.sourcemap =
 				inline: true
@@ -250,6 +253,7 @@ styles-init-tasks = (name, item, sub-task=false) !->
 		src-dir: item.srcDir or null
 		build-file: item.buildFile
 		dest-dir: item.destDir or null
+		shim: item.shim or null
 
 	if typeof item.sourceMaps is \boolean
 		params.source-maps = item.sourceMaps
