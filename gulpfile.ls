@@ -12,7 +12,6 @@ require! {
 	gulp
 	\gulp-plumber : plumber
 	yargs : {argv}
-	\merge-stream : merge
 	\gulp-callback : gcb
 
 	del
