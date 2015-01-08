@@ -40,6 +40,14 @@ production = argv.production?
 # ignore errors, will be enabled anyway by any watcher
 ignore-errors = argv[\ignore-errors]?
 
+supported-types =
+	styles:
+		\stylus
+		\less
+	scripts:
+		\browserify
+		\liveify
+
 # helpers {{{1
 
 rename-build-file = (build-path, main-src, build-file) !->
@@ -88,6 +96,12 @@ prepare-paths = (params, cb) !->
 	throw new Error "Source file '#src-file' is not exists" if not exists
 
 	cb src-file, src-dir, dest-dir
+
+check-for-supported-type = (category, type) !-->
+	unless supported-types[category]?
+		throw new Error "Unknown category: '#category'"
+	unless type |> (in supported-types[category])
+		throw new Error "Unknown #category type: '#type'"
 
 # helpers }}}1
 
@@ -226,7 +240,7 @@ styles-build-task = (name, params, cb) !->
 	if params.type is \stylus
 		use = [nib()]
 		if params.shim? then for module-path in params.shim
-			use = use ++ require path.join process.cwd!, module-path
+			use.push require path.join process.cwd!, module-path
 		options.use = use
 		if source-maps
 			options.sourcemap =
@@ -259,6 +273,8 @@ styles-init-tasks = (name, item, sub-task=false) !->
 		dest-dir: item.destDir or null
 		shim: item.shim or null
 
+	params.type |> check-for-supported-type \styles
+
 	if typeof item.sourceMaps is \boolean
 		params.source-maps = item.sourceMaps
 
@@ -275,11 +291,8 @@ styles-init-tasks = (name, item, sub-task=false) !->
 	gulp.task clean-task-name,
 		let name, params then (cb) !-> styles-clean-task name, params, cb
 
-	if item.type is \less or item.type is \stylus
-		gulp.task build-task-name, pre-build-tasks,
-			let name, params then (cb) !-> styles-build-task name, params, cb
-	else
-		throw new Error "Unknown styles type for '#name' task."
+	gulp.task build-task-name, pre-build-tasks,
+		let name, params then (cb) !-> styles-build-task name, params, cb
 
 	styles-clean-tasks.push clean-task-name
 	if not sub-task then styles-build-tasks.push build-task-name
@@ -296,6 +309,8 @@ styles-init-tasks = (name, item, sub-task=false) !->
 		watch-files =
 			path.join src-dir, '**/*.styl'
 			path.join src-dir, '**/*.stylus'
+	else
+		...
 
 	init-watcher-task(
 		sub-task
@@ -388,6 +403,8 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 		jshint-params: item.jshintParams and item.jshintParams or null
 		jshint-exclude: item.jshintExclude and item.jshintExclude or []
 
+	params.type |> check-for-supported-type \scripts
+
 	if item.type is \liveify
 		params.jshint-exclude.push path.join item.path, 'src/**/*.ls'
 
@@ -422,7 +439,7 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 			let name, params
 				(cb) !-> scripts-build-browserify-task name, params, cb
 	else
-		throw new Error "Unknown scripts type for '#name' task."
+		...
 
 	scripts-clean-tasks.push clean-task-name
 	if not sub-task then scripts-build-tasks.push build-task-name
@@ -439,6 +456,8 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 		watch-files =
 			path.join src-dir, '**/*.ls'
 			path.join src-dir, '**/*.js'
+	else
+		...
 
 	init-watcher-task(
 		sub-task
