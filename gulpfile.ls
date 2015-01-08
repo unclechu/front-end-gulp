@@ -82,12 +82,12 @@ prepare-paths = (params, cb) !->
 	src-dir = path.join params.path, \src
 	src-dir = params.src-dir if params.src-dir?
 
-	src-path = path.join src-dir, params.main-src
+	src-file = path.join src-dir, params.main-src
 
-	exists = fs.exists-sync src-path
-	throw new Error "Source path '#src-path' is not exists" if not exists
+	exists = fs.exists-sync src-file
+	throw new Error "Source file '#src-file' is not exists" if not exists
 
-	cb src-path, src-dir, dest-dir
+	cb src-file, src-dir, dest-dir
 
 # helpers }}}1
 
@@ -236,9 +236,9 @@ styles-build-task = (name, params, cb) !->
 	else if params.type is \less and source-maps
 		source-maps-as-plugin = true
 
-	(src-path, src-dir, dest-dir) <-! prepare-paths params
+	(src-file, src-dir, dest-dir) <-! prepare-paths params
 
-	gulp.src src-path
+	gulp.src src-file
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
 		.pipe gulpif source-maps-as-plugin, sourcemaps.init!
 		.pipe gulpif params.type is \less, less options
@@ -286,7 +286,7 @@ styles-init-tasks = (name, item, sub-task=false) !->
 
 	# watcher
 
-	(src-path, src-dir) <-! prepare-paths params
+	(src-file, src-dir) <-! prepare-paths params
 
 	if item.watchFiles?
 		watch-files = item.watchFiles
@@ -357,9 +357,9 @@ scripts-build-browserify-task = (name, params, cb) !->
 			path: './node_modules/prelude-ls'
 			exports: ''
 
-	(src-path, src-dir, dest-dir) <-! prepare-paths params
+	(src-file, src-dir, dest-dir) <-! prepare-paths params
 
-	gulp.src src-path, read: false
+	gulp.src src-file, read: false
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
 		.pipe browserify options
 		.pipe gulpif production, uglify preserveComments: \some
@@ -429,7 +429,7 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 
 	# watcher
 
-	(src-path, src-dir) <-! prepare-paths params
+	(src-file, src-dir) <-! prepare-paths params
 
 	if item.watchFiles?
 		watch-files = item.watchFiles

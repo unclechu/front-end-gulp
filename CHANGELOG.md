@@ -1,6 +1,13 @@
 Changelog
 =========
 
+r11 / 2015-01-08
+----------------
+
+1. More abstractions in code instead of copy-paste blocks;
+2. Fixed sources paths for watchers (custom sources paths support);
+3. ...
+
 r10 / 2015-01-08
 ----------------
 
