@@ -75,6 +75,20 @@ init-watcher-task = (
 
 	if add-to-list then watchers-list.push watch-task-name
 
+prepare-paths = (params, cb) !->
+	dest-dir = path.join params.path, \build
+	dest-dir = params.dest-dir if params.dest-dir?
+
+	src-dir = path.join params.path, \src
+	src-dir = params.src-dir if params.src-dir?
+
+	src-path = path.join src-dir, params.main-src
+
+	(exists) <-! fs.exists src-path
+	throw new Error "Source path '#src-path' is not exists" if not exists
+
+	cb src-path, src-dir, dest-dir
+
 # helpers }}}1
 
 # clean {{{1
@@ -222,17 +236,7 @@ styles-build-task = (name, params, cb) !->
 	else if params.type is \less and source-maps
 		source-maps-as-plugin = true
 
-	dest-dir = path.join params.path, \build
-	dest-dir = params.dest-dir if params.dest-dir?
-
-	src-dir = path.join params.path, \src
-	src-dir = params.src-dir if params.src-dir?
-
-	src-path = path.join src-dir, params.main-src
-
-	(exists) <-! fs.exists src-path
-
-	throw new Error "Source path '#src-path' is not exists" if not exists
+	(src-path, src-dir, dest-dir) <-! prepare-paths params
 
 	gulp.src src-path
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
@@ -353,17 +357,7 @@ scripts-build-browserify-task = (name, params, cb) !->
 			path: './node_modules/prelude-ls'
 			exports: ''
 
-	dest-dir = path.join params.path, \build
-	dest-dir = params.dest-dir if params.dest-dir?
-
-	src-dir = path.join params.path, \src
-	src-dir = params.src-dir if params.src-dir?
-
-	src-path = path.join src-dir, params.main-src
-
-	(exists) <-! fs.exists src-path
-
-	throw new Error "Source path '#src-path' is not exists" if not exists
+	(src-path, src-dir, dest-dir) <-! prepare-paths params
 
 	gulp.src src-path, read: false
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
