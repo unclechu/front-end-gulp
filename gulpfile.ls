@@ -84,7 +84,7 @@ prepare-paths = (params, cb) !->
 
 	src-path = path.join src-dir, params.main-src
 
-	(exists) <-! fs.exists src-path
+	exists = fs.exists-sync src-path
 	throw new Error "Source path '#src-path' is not exists" if not exists
 
 	cb src-path, src-dir, dest-dir
@@ -286,16 +286,16 @@ styles-init-tasks = (name, item, sub-task=false) !->
 
 	# watcher
 
-	src-path = path.join params.path, \src
+	(src-path, src-dir) <-! prepare-paths params
 
 	if item.watchFiles?
 		watch-files = item.watchFiles
 	else if item.type is \less
-		watch-files = path.join src-path, '**/*.less'
+		watch-files = path.join src-dir, '**/*.less'
 	else if item.type is \stylus
 		watch-files =
-			path.join src-path, '**/*.styl'
-			path.join src-path, '**/*.stylus'
+			path.join src-dir, '**/*.styl'
+			path.join src-dir, '**/*.stylus'
 
 	init-watcher-task(
 		sub-task
@@ -429,16 +429,16 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 
 	# watcher
 
-	src-path = path.join params.path, \src
+	(src-path, src-dir) <-! prepare-paths params
 
 	if item.watchFiles?
 		watch-files = item.watchFiles
 	else if item.type is \browserify
-		watch-files = path.join src-path, '**/*.js'
+		watch-files = path.join src-dir, '**/*.js'
 	else if item.type is \liveify
 		watch-files =
-			path.join src-path, '**/*.ls'
-			path.join src-path, '**/*.js'
+			path.join src-dir, '**/*.ls'
+			path.join src-dir, '**/*.js'
 
 	init-watcher-task(
 		sub-task
