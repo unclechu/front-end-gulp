@@ -1,5 +1,4 @@
 /**
- * @version r11
  * @author Viacheslav Lotsmanov
  * @license GNU/GPLv3 (https://raw.githubusercontent.com/unclechu/front-end-gulp-pattern/master/LICENSE)
  * @see {@link https://github.com/unclechu/front-end-gulp-pattern|GitHub}
