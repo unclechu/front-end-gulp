@@ -404,7 +404,7 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 		build-file: item.buildFile
 		dest-dir: item.destDir or null
 		shim: item.shim or {}
-		jshint-disabled: item.jshintDisabled?
+		jshint-disabled: item.jshintDisabled and true or false
 		jshint-params: item.jshintParams or null
 		jshint-exclude: item.jshintExclude or []
 
