@@ -220,14 +220,18 @@ styles-watch-tasks = []
 styles-data = pkg.gulp.styles or {}
 
 styles-clean-task = (name, params, cb) !->
+	(src-file, src-dir, dest-dir) <-! prepare-paths params
+
 	if params.dest-dir?
-		to-remove = path.join params.dest-dir, params.build-file
+		to-remove = path.join dest-dir, params.build-file
 	else
-		to-remove = path.join params.path, \build
+		to-remove = dest-dir
 
 	del to-remove, force: true, cb
 
 styles-build-task = (name, params, cb) !->
+	(src-file, src-dir, dest-dir) <-! prepare-paths params
+
 	options = compress: production
 
 	source-maps = false
@@ -238,20 +242,19 @@ styles-build-task = (name, params, cb) !->
 
 	source-maps-as-plugin = false
 
-	if params.type is \stylus
-		use = [nib()]
-		if params.shim? then for module-path in params.shim
-			use.push require path.join process.cwd!, module-path
-		options.use = use
+	switch
+	| params.type is \stylus =>
+		if params.shim?
+			options.use = []
+			for module-path in params.shim
+				options.use.push require path.join process.cwd!, module-path
 		if source-maps
 			options.sourcemap =
 				inline: true
-				sourceRoot: '.'
-				basePath: path.join params.path, \src
-	else if params.type is \less and source-maps
-		source-maps-as-plugin = true
-
-	(src-file, src-dir, dest-dir) <-! prepare-paths params
+				sourceRoot: \.
+				basePath: path.join src-dir
+	| params.type is \less   => source-maps-as-plugin = true if source-maps
+	| _ => ...
 
 	gulp.src src-file
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
@@ -283,35 +286,37 @@ styles-init-tasks = (name, item, sub-task=false) !->
 	build-task-name = \styles- + name
 	watch-task-name = build-task-name + \-watch
 
-	pre-build-tasks = [ clean-task-name ]
+	pre-build-tasks =
+		clean-task-name
+		...
 
-	if item.buildDeps then
+	if item.buildDeps?
 		for task-name in item.buildDeps
 			pre-build-tasks.push task-name
 
 	gulp.task clean-task-name,
-		let name, params then (cb) !-> styles-clean-task name, params, cb
+		let name, params
+			(cb) !-> styles-clean-task name, params, cb
 
 	gulp.task build-task-name, pre-build-tasks,
-		let name, params then (cb) !-> styles-build-task name, params, cb
+		let name, params
+			(cb) !-> styles-build-task name, params, cb
 
 	styles-clean-tasks.push clean-task-name
-	if not sub-task then styles-build-tasks.push build-task-name
+	styles-build-tasks.push build-task-name unless sub-task
 
 	# watcher
 
 	(src-file, src-dir) <-! prepare-paths params
 
-	if item.watchFiles?
-		watch-files = item.watchFiles
-	else if item.type is \less
-		watch-files = path.join src-dir, '**/*.less'
-	else if item.type is \stylus
+	switch
+	| item.watchFiles?     => watch-files = item.watchFiles
+	| item.type is \less   => watch-files = path.join src-dir, '**/*.less'
+	| item.type is \stylus =>
 		watch-files =
 			path.join src-dir, '**/*.styl'
 			path.join src-dir, '**/*.stylus'
-	else
-		...
+	| _ => ...
 
 	init-watcher-task(
 		sub-task
@@ -325,9 +330,9 @@ styles-init-tasks = (name, item, sub-task=false) !->
 for name, item of styles-data
 	init-task-iteration name, item, styles-init-tasks
 
-gulp.task \clean-styles , styles-clean-tasks
-gulp.task \styles , styles-build-tasks
-gulp.task \styles-watch , styles-watch-tasks
+gulp.task \clean-styles, styles-clean-tasks
+gulp.task \styles, styles-build-tasks
+gulp.task \styles-watch, styles-watch-tasks
 
 # styles }}}1
 
@@ -481,9 +486,9 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 for name, item of scripts-data
 	init-task-iteration name, item, scripts-init-tasks
 
-gulp.task \clean-scripts , scripts-clean-tasks
-gulp.task \scripts , scripts-build-tasks
-gulp.task \scripts-watch , scripts-watch-tasks
+gulp.task \clean-scripts, scripts-clean-tasks
+gulp.task \scripts, scripts-build-tasks
+gulp.task \scripts-watch, scripts-watch-tasks
 
 # scripts }}}1
 
