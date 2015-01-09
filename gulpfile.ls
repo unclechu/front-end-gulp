@@ -23,6 +23,9 @@ require! {
 
 pkg = require path.join process.cwd!, './package.json'
 
+unless pkg.gulp?
+	throw new Error 'No "gulp" key in package.json'
+
 gulp.task \help, tasks
 
 production = argv.production?
@@ -233,7 +236,10 @@ styles-build-task = (name, params, cb) !->
 	else if not production and params.source-maps is not false
 		source-maps = true
 
+	# only for less
 	source-maps-as-plugin = false
+
+	plugin = null
 
 	switch
 	| params.type is \stylus =>
@@ -246,15 +252,17 @@ styles-build-task = (name, params, cb) !->
 				inline: true
 				sourceRoot: \.
 				basePath: path.join src-dir
-	| params.type is \less   => source-maps-as-plugin = true if source-maps
+		plugin = require \gulp-stylus
+	| params.type is \less =>
+		source-maps-as-plugin = true if source-maps
+		plugin = require \gulp-less
 	| _ => ...
 
 	gulp.src src-file
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
 		.pipe gulpif source-maps-as-plugin, sourcemaps.init!
-		.pipe gulpif params.type is \less, (require \gulp-less) options
+		.pipe plugin options
 		.pipe gulpif source-maps-as-plugin, sourcemaps.write!
-		.pipe gulpif params.type is \stylus, (require \gulp-stylus) options
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest dest-dir

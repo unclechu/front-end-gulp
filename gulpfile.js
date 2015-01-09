@@ -6,29 +6,22 @@
  * @see {@link https://github.com/unclechu/web-front-end-gulp-template|GitHub}
  */
 (function(){
-  var path, fs, gulp, plumber, argv, merge, gcb, del, spritesmith, tasks, less, sourcemaps, stylus, nib, gulpif, rename, browserify, liveify, uglify, jshint, stylish, pkg, production, ignoreErrors, supportedTypes, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, cleanData, distCleanData, spritesCleanTasks, spritesBuildTasks, spritesData, spriteCleanTask, spriteBuildTask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsInitTasks;
+  var path, fs, argv, gulp, del, tasks, gcb, plumber, gulpif, rename, sourcemaps, pkg, production, ignoreErrors, supportedTypes, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, typicalCleanTask, cleanData, distCleanData, spritesCleanTasks, spritesBuildTasks, spritesData, spriteCleanTask, spriteBuildTask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsInitTasks;
   path = require('path');
   fs = require('fs');
-  gulp = require('gulp');
-  plumber = require('gulp-plumber');
   argv = require('yargs').argv;
-  merge = require('merge-stream');
-  gcb = require('gulp-callback');
+  gulp = require('gulp');
   del = require('del');
-  spritesmith = require('gulp.spritesmith');
   tasks = require('gulp-task-listing');
-  less = require('gulp-less');
-  sourcemaps = require('gulp-sourcemaps');
-  stylus = require('gulp-stylus');
-  nib = require('nib');
+  gcb = require('gulp-callback');
+  plumber = require('gulp-plumber');
   gulpif = require('gulp-if');
   rename = require('gulp-rename');
-  browserify = require('gulp-browserify');
-  liveify = require('liveify');
-  uglify = require('gulp-uglify');
-  jshint = require('gulp-jshint');
-  stylish = require('jshint-stylish');
+  sourcemaps = require('gulp-sourcemaps');
   pkg = require(path.join(process.cwd(), './package.json'));
+  if (pkg.gulp == null) {
+    throw new Error('No "gulp" key in package.json');
+  }
   gulp.task('help', tasks);
   production = argv.production != null;
   ignoreErrors = argv['ignore-errors'] != null;
@@ -102,6 +95,19 @@
       throw new Error("Unknown " + category + " type: '" + type + "'");
     }
   });
+  typicalCleanTask = function(name, params, cb){
+    preparePaths(params, function(srcFile, srcDir, destDir){
+      var toRemove;
+      if (params.destDir != null) {
+        toRemove = path.join(destDir, params.buildFile);
+      } else {
+        toRemove = destDir;
+      }
+      del(toRemove, {
+        force: true
+      }, cb);
+    });
+  };
   cleanData = pkg.gulp.clean || [];
   distCleanData = pkg.gulp.distclean || [];
   gulp.task('clean', ['clean-sprites', 'clean-styles', 'clean-scripts'], function(cb){
@@ -129,7 +135,7 @@
     var spriteData, ready, postCb, imgDest;
     spriteData = gulp.src(path.join(params.imgDir, 'src/*.png')).pipe(gulpif(ignoreErrors, plumber({
       errorHandler: cb
-    }))).pipe(spritesmith(spriteParams));
+    }))).pipe(require('gulp.spritesmith')(spriteParams));
     ready = {
       img: false,
       css: false
@@ -211,52 +217,51 @@
   stylesBuildTasks = [];
   stylesWatchTasks = [];
   stylesData = pkg.gulp.styles || {};
-  stylesCleanTask = function(name, params, cb){
-    var toRemove;
-    if (params.destDir != null) {
-      toRemove = path.join(params.destDir, params.buildFile);
-    } else {
-      toRemove = path.join(params.path, 'build');
-    }
-    del(toRemove, {
-      force: true
-    }, cb);
-  };
+  stylesCleanTask = typicalCleanTask;
   stylesBuildTask = function(name, params, cb){
-    var options, sourceMaps, sourceMapsAsPlugin, use, i$, ref$, len$, modulePath;
-    options = {
-      compress: production
-    };
-    sourceMaps = false;
-    if (params.sourceMaps === true) {
-      sourceMaps = true;
-    } else if (!production && params.sourceMaps !== false) {
-      sourceMaps = true;
-    }
-    sourceMapsAsPlugin = false;
-    if (params.type === 'stylus') {
-      use = [nib()];
-      if (params.shim != null) {
-        for (i$ = 0, len$ = (ref$ = params.shim).length; i$ < len$; ++i$) {
-          modulePath = ref$[i$];
-          use.push(require(path.join(process.cwd(), modulePath)));
-        }
-      }
-      options.use = use;
-      if (sourceMaps) {
-        options.sourcemap = {
-          inline: true,
-          sourceRoot: '.',
-          basePath: path.join(params.path, 'src')
-        };
-      }
-    } else if (params.type === 'less' && sourceMaps) {
-      sourceMapsAsPlugin = true;
-    }
     preparePaths(params, function(srcFile, srcDir, destDir){
+      var options, sourceMaps, sourceMapsAsPlugin, plugin, i$, ref$, len$, modulePath;
+      options = {
+        compress: production
+      };
+      sourceMaps = false;
+      if (params.sourceMaps === true) {
+        sourceMaps = true;
+      } else if (!production && params.sourceMaps !== false) {
+        sourceMaps = true;
+      }
+      sourceMapsAsPlugin = false;
+      plugin = null;
+      switch (false) {
+      case params.type !== 'stylus':
+        if (params.shim != null) {
+          options.use = [];
+          for (i$ = 0, len$ = (ref$ = params.shim).length; i$ < len$; ++i$) {
+            modulePath = ref$[i$];
+            options.use.push(require(path.join(process.cwd(), modulePath)));
+          }
+        }
+        if (sourceMaps) {
+          options.sourcemap = {
+            inline: true,
+            sourceRoot: '.',
+            basePath: path.join(srcDir)
+          };
+        }
+        plugin = require('gulp-stylus');
+        break;
+      case params.type !== 'less':
+        if (sourceMaps) {
+          sourceMapsAsPlugin = true;
+        }
+        plugin = require('gulp-less');
+        break;
+      default:
+        throw Error('unimplemented');
+      }
       gulp.src(srcFile).pipe(gulpif(ignoreErrors, plumber({
         errorHandler: cb
-      }))).pipe(gulpif(sourceMapsAsPlugin, sourcemaps.init())).pipe(gulpif(params.type === 'less', less(options))).pipe(gulpif(sourceMapsAsPlugin, sourcemaps.write())).pipe(gulpif(params.type === 'stylus', stylus(options))).pipe(rename(function(buildPath){
+      }))).pipe(gulpif(sourceMapsAsPlugin, sourcemaps.init())).pipe(plugin(options)).pipe(gulpif(sourceMapsAsPlugin, sourcemaps.write())).pipe(rename(function(buildPath){
         renameBuildFile(buildPath, params.mainSrc, params.buildFile);
       })).pipe(gulp.dest(destDir)).pipe(gcb(cb));
     });
@@ -282,7 +287,7 @@
     buildTaskName = 'styles-' + name;
     watchTaskName = buildTaskName + '-watch';
     preBuildTasks = [cleanTaskName];
-    if (item.buildDeps) {
+    if (item.buildDeps != null) {
       for (i$ = 0, len$ = (ref$ = item.buildDeps).length; i$ < len$; ++i$) {
         taskName = ref$[i$];
         preBuildTasks.push(taskName);
@@ -304,13 +309,17 @@
     }
     preparePaths(params, function(srcFile, srcDir){
       var watchFiles;
-      if (item.watchFiles != null) {
+      switch (false) {
+      case item.watchFiles == null:
         watchFiles = item.watchFiles;
-      } else if (item.type === 'less') {
+        break;
+      case item.type !== 'less':
         watchFiles = path.join(srcDir, '**/*.less');
-      } else if (item.type === 'stylus') {
+        break;
+      case item.type !== 'stylus':
         watchFiles = [path.join(srcDir, '**/*.styl'), path.join(srcDir, '**/*.stylus')];
-      } else {
+        break;
+      default:
         throw Error('unimplemented');
       }
       initWatcherTask(subTask, watchFiles, item.addToWatchersList, watchTaskName, stylesWatchTasks, buildTaskName);
@@ -327,25 +336,19 @@
   scriptsBuildTasks = [];
   scriptsWatchTasks = [];
   scriptsData = pkg.gulp.scripts || {};
-  scriptsCleanTask = function(name, params, cb){
-    var toRemove;
-    if (params.destDir != null) {
-      toRemove = path.join(params.destDir, params.buildFile);
-    } else {
-      toRemove = path.join(params.path, 'build');
-    }
-    del(toRemove, {
-      force: true
-    }, cb);
-  };
+  scriptsCleanTask = typicalCleanTask;
   scriptsJshintTask = function(name, params, cb){
-    var src, i$, ref$, len$, exclude;
-    src = [path.join(params.path, 'src/**/*.js')];
-    for (i$ = 0, len$ = (ref$ = params.jshintExclude).length; i$ < len$; ++i$) {
-      exclude = ref$[i$];
-      src.push('!' + exclude);
-    }
-    gulp.src(src).pipe(jshint(params.jshintParams)).pipe(jshint.reporter(stylish)).pipe(rename('x')).end(cb);
+    preparePaths(params, function(srcFile, srcDir){
+      var jshint, stylish, src, i$, ref$, len$, exclude;
+      jshint = require('gulp-jshint');
+      stylish = require('jshint-stylish');
+      src = [path.join(srcDir, '**/*.js')];
+      for (i$ = 0, len$ = (ref$ = params.jshintExclude).length; i$ < len$; ++i$) {
+        exclude = ref$[i$];
+        src.push('!' + exclude);
+      }
+      gulp.src(src).pipe(jshint(params.jshintParams)).pipe(jshint.reporter(stylish)).pipe(rename('x')).end(cb);
+    });
   };
   scriptsBuildBrowserifyTask = function(name, params, cb){
     var options;
@@ -361,17 +364,13 @@
     if (params.type === 'liveify') {
       options.transform = ['liveify'];
       options.extensions = ['.ls'];
-      options.shim.prelude = {
-        path: './node_modules/prelude-ls',
-        exports: ''
-      };
     }
     preparePaths(params, function(srcFile, srcDir, destDir){
       gulp.src(srcFile, {
         read: false
       }).pipe(gulpif(ignoreErrors, plumber({
         errorHandler: cb
-      }))).pipe(browserify(options)).pipe(gulpif(production, uglify({
+      }))).pipe(require('gulp-browserify')(options)).pipe(gulpif(production, require('gulp-uglify')({
         preserveComments: 'some'
       }))).pipe(rename(function(buildPath){
         renameBuildFile(buildPath, params.mainSrc, params.buildFile);
@@ -379,20 +378,8 @@
     });
   };
   scriptsInitTasks = function(name, item, subTask){
-    var key, ref$, shimItem, paramName, val, params, i$, len$, exclude, cleanTaskName, buildTaskName, jshintTaskName, watchTaskName, preBuildTasks, taskName;
+    var params;
     subTask == null && (subTask = false);
-    if (item.shim) {
-      for (key in ref$ = item.shim) {
-        shimItem = ref$[key];
-        for (paramName in shimItem) {
-          val = shimItem[paramName];
-          if (paramName === 'relativePath') {
-            shimItem.path = path.join(item.path, 'src', val);
-            delete shimItem[paramName];
-          }
-        }
-      }
-    }
     params = {
       type: item.type,
       path: item.path,
@@ -402,69 +389,89 @@
       destDir: item.destDir || null,
       shim: item.shim || {},
       jshintDisabled: item.jshintDisabled && true || false,
-      jshintParams: item.jshintParams && item.jshintParams || null,
-      jshintExclude: item.jshintExclude && item.jshintExclude || []
+      jshintParams: item.jshintParams || null,
+      jshintExclude: item.jshintExclude || []
     };
     checkForSupportedType('scripts')(
     params.type);
-    if (item.type === 'liveify') {
-      params.jshintExclude.push(path.join(item.path, 'src/**/*.ls'));
-    }
-    if (item.jshintRelativeExclude) {
-      for (i$ = 0, len$ = (ref$ = item.jshintRelativeExclude).length; i$ < len$; ++i$) {
-        exclude = ref$[i$];
-        params.jshintExclude.push(path.join(item.path, 'src', exclude));
-      }
-    }
-    if (typeof item.debug === 'boolean') {
-      params.debug = item.debug;
-    }
-    cleanTaskName = 'clean-scripts-' + name;
-    buildTaskName = 'scripts-' + name;
-    jshintTaskName = buildTaskName + '-jshint';
-    watchTaskName = buildTaskName + '-watch';
-    preBuildTasks = [cleanTaskName];
-    if (item.buildDeps) {
-      for (i$ = 0, len$ = (ref$ = item.buildDeps).length; i$ < len$; ++i$) {
-        taskName = ref$[i$];
-        preBuildTasks.push(taskName);
-      }
-    }
-    if (!params.jshintDisabled) {
-      gulp.task(jshintTaskName, (function(name, params){
-        return function(cb){
-          scriptsJshintTask(name, params, cb);
-        };
-      }.call(this, name, params)));
-      preBuildTasks.push(jshintTaskName);
-    }
-    gulp.task(cleanTaskName, (function(name, params){
-      return function(cb){
-        scriptsCleanTask(name, params, cb);
-      };
-    }.call(this, name, params)));
-    if (item.type === 'browserify' || item.type === 'liveify') {
-      gulp.task(buildTaskName, preBuildTasks, (function(name, params){
-        return function(cb){
-          scriptsBuildBrowserifyTask(name, params, cb);
-        };
-      }.call(this, name, params)));
-    } else {
-      throw Error('unimplemented');
-    }
-    scriptsCleanTasks.push(cleanTaskName);
-    if (!subTask) {
-      scriptsBuildTasks.push(buildTaskName);
-    }
     preparePaths(params, function(srcFile, srcDir){
-      var watchFiles;
-      if (item.watchFiles != null) {
-        watchFiles = item.watchFiles;
-      } else if (item.type === 'browserify') {
-        watchFiles = path.join(srcDir, '**/*.js');
-      } else if (item.type === 'liveify') {
-        watchFiles = [path.join(srcDir, '**/*.ls'), path.join(srcDir, '**/*.js')];
+      var key, ref$, shimItem, paramName, val, liveify, i$, len$, exclude, cleanTaskName, buildTaskName, jshintTaskName, watchTaskName, preBuildTasks, taskName, watchFiles;
+      if (item.shim != null) {
+        for (key in ref$ = params.shim) {
+          shimItem = ref$[key];
+          for (paramName in shimItem) {
+            val = shimItem[paramName];
+            if (paramName === 'relativePath') {
+              shimItem.path = path.join(srcDir, val);
+              delete shimItem[paramName];
+            }
+          }
+        }
+      }
+      if (params.type === 'liveify') {
+        liveify = require('liveify');
+        params.jshintExclude.push(path.join(srcDir, '**/*.ls'));
+      }
+      if (item.jshintRelativeExclude) {
+        for (i$ = 0, len$ = (ref$ = item.jshintRelativeExclude).length; i$ < len$; ++i$) {
+          exclude = ref$[i$];
+          params.jshintExclude.push(path.join(srcDir, exclude));
+        }
+      }
+      if (typeof item.debug === 'boolean') {
+        params.debug = item.debug;
+      }
+      cleanTaskName = 'clean-scripts-' + name;
+      buildTaskName = 'scripts-' + name;
+      jshintTaskName = buildTaskName + '-jshint';
+      watchTaskName = buildTaskName + '-watch';
+      preBuildTasks = [cleanTaskName];
+      if (item.buildDeps != null) {
+        for (i$ = 0, len$ = (ref$ = item.buildDeps).length; i$ < len$; ++i$) {
+          taskName = ref$[i$];
+          preBuildTasks.push(taskName);
+        }
+      }
+      if (!params.jshintDisabled) {
+        gulp.task(jshintTaskName, (function(name, params){
+          return function(cb){
+            scriptsJshintTask(name, params, cb);
+          };
+        }.call(this, name, params)));
+        preBuildTasks.push(jshintTaskName);
+      }
+      gulp.task(cleanTaskName, (function(name, params){
+        return function(cb){
+          scriptsCleanTask(name, params, cb);
+        };
+      }.call(this, name, params)));
+      if ((function(it){
+        return it === 'browserify' || it === 'liveify';
+      })(
+      item.type)) {
+        gulp.task(buildTaskName, preBuildTasks, (function(name, params){
+          return function(cb){
+            scriptsBuildBrowserifyTask(name, params, cb);
+          };
+        }.call(this, name, params)));
       } else {
+        throw Error('unimplemented');
+      }
+      scriptsCleanTasks.push(cleanTaskName);
+      if (!subTask) {
+        scriptsBuildTasks.push(buildTaskName);
+      }
+      switch (false) {
+      case item.watchFiles == null:
+        watchFiles = item.watchFiles;
+        break;
+      case item.type !== 'browserify':
+        watchFiles = path.join(srcDir, '**/*.js');
+        break;
+      case item.type !== 'liveify':
+        watchFiles = [path.join(srcDir, '**/*.ls'), path.join(srcDir, '**/*.js')];
+        break;
+      default:
         throw Error('unimplemented');
       }
       initWatcherTask(subTask, watchFiles, item.addToWatchersList, watchTaskName, scriptsWatchTasks, buildTaskName);
