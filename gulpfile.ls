@@ -41,6 +41,10 @@ supported-types =
 		\browserify
 		\liveify
 
+watch-tasks = []
+default-tasks = []
+clean-tasks = []
+
 # helpers {{{1
 
 rename-build-file = (build-path, main-src, build-file) !->
@@ -109,21 +113,6 @@ typical-clean-task = (name, params, cb) !->
 	del to-remove, force: true, cb
 
 # helpers }}}1
-
-# clean {{{1
-
-clean-data = pkg.gulp.clean or []
-dist-clean-data = pkg.gulp.distclean or []
-
-gulp.task \clean , [
-	\clean-sprites
-	\clean-styles
-	\clean-scripts
-], (cb) !-> del clean-data , cb
-
-gulp.task \distclean , [ \clean ], (cb) !-> del dist-clean-data , cb
-
-# clean }}}1
 
 # sprites {{{1
 
@@ -210,8 +199,12 @@ sprite-init-tasks = (name, item, sub-task=false) !->
 for name, item of sprites-data
 	init-task-iteration name, item, sprite-init-tasks
 
-gulp.task \clean-sprites, sprites-clean-tasks
-gulp.task \sprites, sprites-build-tasks
+if sprites-clean-tasks.length > 0
+	gulp.task \clean-sprites, sprites-clean-tasks
+	clean-tasks.push \clean-sprites
+if sprites-build-tasks.length > 0
+	gulp.task \sprites, sprites-build-tasks
+	default-tasks.push \sprites
 
 # sprites }}}1
 
@@ -331,9 +324,15 @@ styles-init-tasks = (name, item, sub-task=false) !->
 for name, item of styles-data
 	init-task-iteration name, item, styles-init-tasks
 
-gulp.task \clean-styles, styles-clean-tasks
-gulp.task \styles, styles-build-tasks
-gulp.task \styles-watch, styles-watch-tasks
+if styles-clean-tasks.length > 0
+	gulp.task \clean-styles, styles-clean-tasks
+	clean-tasks.push \clean-styles
+if styles-build-tasks.length > 0
+	gulp.task \styles, styles-build-tasks
+	default-tasks.push \styles
+if styles-watch-tasks.length > 0
+	gulp.task \styles-watch, styles-watch-tasks
+	watch-tasks.push \styles-watch
 
 # styles }}}1
 
@@ -485,19 +484,32 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 for name, item of scripts-data
 	init-task-iteration name, item, scripts-init-tasks
 
-gulp.task \clean-scripts, scripts-clean-tasks
-gulp.task \scripts, scripts-build-tasks
-gulp.task \scripts-watch, scripts-watch-tasks
+if scripts-clean-tasks.length > 0
+	gulp.task \clean-scripts, scripts-clean-tasks
+	clean-tasks.push \clean-scripts
+if scripts-build-tasks.length > 0
+	gulp.task \scripts, scripts-build-tasks
+	default-tasks.push \scripts
+if scripts-watch-tasks.length > 0
+	gulp.task \scripts-watch, scripts-watch-tasks
+	watch-tasks.push \scripts-watch
 
 # scripts }}}1
 
-gulp.task \watch [
-	\styles-watch
-	\scripts-watch
-]
+# clean {{{1
 
-gulp.task \default [
-	\sprites
-	\styles
-	\scripts
-]
+clean-data = pkg.gulp.clean or []
+dist-clean-data = pkg.gulp.distclean or []
+dist-clean-tasks = []
+
+if clean-data.length > 0 or clean-tasks.length > 0
+	gulp.task \clean, clean-tasks, (cb) !-> del clean-data , cb
+	dist-clean-tasks.push \clean
+
+if dist-clean-tasks.length > 0 or dist-clean-data.length > 0
+	gulp.task \distclean , dist-clean-tasks, (cb) !-> del dist-clean-data , cb
+
+# clean }}}1
+
+gulp.task \watch, watch-tasks if watch-tasks.length > 0
+gulp.task \default default-tasks if default-tasks.length > 0
