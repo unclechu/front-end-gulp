@@ -104,6 +104,16 @@ check-for-supported-type = (category, type) !-->
 	unless type |> (in supported-types[category])
 		throw new Error "Unknown #category type: '#type'"
 
+typical-clean-task = (name, params, cb) !->
+	(src-file, src-dir, dest-dir) <-! prepare-paths params
+
+	if params.dest-dir?
+		to-remove = path.join dest-dir, params.build-file
+	else
+		to-remove = dest-dir
+
+	del to-remove, force: true, cb
+
 # helpers }}}1
 
 # clean {{{1
@@ -219,15 +229,7 @@ styles-watch-tasks = []
 
 styles-data = pkg.gulp.styles or {}
 
-styles-clean-task = (name, params, cb) !->
-	(src-file, src-dir, dest-dir) <-! prepare-paths params
-
-	if params.dest-dir?
-		to-remove = path.join dest-dir, params.build-file
-	else
-		to-remove = dest-dir
-
-	del to-remove, force: true, cb
+styles-clean-task = typical-clean-task
 
 styles-build-task = (name, params, cb) !->
 	(src-file, src-dir, dest-dir) <-! prepare-paths params
@@ -344,15 +346,7 @@ scripts-watch-tasks = []
 
 scripts-data = pkg.gulp.scripts or {}
 
-scripts-clean-task = (name, params, cb) !->
-	(src-file, src-dir, dest-dir) <-! prepare-paths params
-
-	if params.dest-dir?
-		to-remove = path.join dest-dir, params.build-file
-	else
-		to-remove = dest-dir
-
-	del to-remove, force: true, cb
+scripts-clean-task = typical-clean-task
 
 scripts-jshint-task = (name, params, cb) !->
 	(src-file, src-dir) <-! prepare-paths params
