@@ -1,7 +1,7 @@
 name: \front-end-gulp-pattern
 version: '0.0.1'
 
-description: 'Gulp-cli wrapper with own read-only gulpfile for front-end which is configured through package.json.'
+description: 'gulp-cli wrapper with own read-only gulpfile for front-end.'
 keywords:
 	\gulp
 	\stylus
