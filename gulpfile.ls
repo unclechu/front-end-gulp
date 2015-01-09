@@ -118,6 +118,7 @@ typical-clean-task = (name, params, cb) !->
 
 sprites-clean-tasks = []
 sprites-build-tasks = []
+sprites-watch-tasks = []
 
 sprites-data = pkg.gulp.sprites or {}
 
@@ -221,6 +222,7 @@ sprite-init-tasks = (name, item, sub-task=false) !->
 
 	clean-task-name = \clean-sprite- + name
 	build-task-name = \sprite- + name
+	watch-task-name = build-task-name + \-watch
 
 	pre-build-tasks =
 		clean-task-name
@@ -241,6 +243,22 @@ sprite-init-tasks = (name, item, sub-task=false) !->
 	sprites-clean-tasks.push clean-task-name
 	sprites-build-tasks.push build-task-name unless sub-task
 
+	# watcher
+
+	if item.watchFiles?
+		watch-files = item.watchFiles
+	else
+		watch-files = path.join img.src-dir, '*.png'
+
+	init-watcher-task(
+		sub-task
+		watch-files
+		item.addToWatchersList
+		watch-task-name
+		sprites-watch-tasks
+		build-task-name
+	)
+
 for name, item of sprites-data
 	init-task-iteration name, item, sprite-init-tasks
 
@@ -250,6 +268,9 @@ if sprites-clean-tasks.length > 0
 if sprites-build-tasks.length > 0
 	gulp.task \sprites, sprites-build-tasks
 	default-tasks.push \sprites
+if sprites-watch-tasks.length > 0
+	gulp.task \sprites-watch, sprites-watch-tasks
+	watch-tasks.push \sprites-watch
 
 # sprites }}}1
 

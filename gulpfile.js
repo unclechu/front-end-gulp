@@ -6,7 +6,7 @@
  * @see {@link https://github.com/unclechu/front-end-gulp-pattern|GitHub}
  */
 (function(){
-  var path, fs, argv, gulp, del, tasks, gcb, plumber, gulpif, rename, sourcemaps, pkg, production, ignoreErrors, supportedTypes, watchTasks, defaultTasks, cleanTasks, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, typicalCleanTask, spritesCleanTasks, spritesBuildTasks, spritesData, spritePreparePaths, spriteCleanTask, spriteBuildTask, spriteGetNameByMask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsInitTasks, cleanData, distCleanData, distCleanTasks;
+  var path, fs, argv, gulp, del, tasks, gcb, plumber, gulpif, rename, sourcemaps, pkg, production, ignoreErrors, supportedTypes, watchTasks, defaultTasks, cleanTasks, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, typicalCleanTask, spritesCleanTasks, spritesBuildTasks, spritesWatchTasks, spritesData, spritePreparePaths, spriteCleanTask, spriteBuildTask, spriteGetNameByMask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsInitTasks, cleanData, distCleanData, distCleanTasks;
   path = require('path');
   fs = require('fs');
   argv = require('yargs').argv;
@@ -113,6 +113,7 @@
   };
   spritesCleanTasks = [];
   spritesBuildTasks = [];
+  spritesWatchTasks = [];
   spritesData = pkg.gulp.sprites || {};
   spritePreparePaths = function(params, cb){
     var img, data;
@@ -208,7 +209,7 @@
       dataItemNameMask: item.dataItemNameMask || 'sprite-#task-name#-#name#'
     };
     spritePreparePaths(params, function(img, data){
-      var spriteParams, cleanTaskName, buildTaskName, preBuildTasks, i$, ref$, len$, taskName;
+      var spriteParams, cleanTaskName, buildTaskName, watchTaskName, preBuildTasks, i$, ref$, len$, taskName, watchFiles;
       spriteParams = {
         imgName: params.imgBuildFile,
         cssName: params.dataBuildFile,
@@ -227,6 +228,7 @@
       };
       cleanTaskName = 'clean-sprite-' + name;
       buildTaskName = 'sprite-' + name;
+      watchTaskName = buildTaskName + '-watch';
       preBuildTasks = [cleanTaskName];
       if (item.buildDeps != null) {
         for (i$ = 0, len$ = (ref$ = item.buildDeps).length; i$ < len$; ++i$) {
@@ -248,6 +250,12 @@
       if (!subTask) {
         spritesBuildTasks.push(buildTaskName);
       }
+      if (item.watchFiles != null) {
+        watchFiles = item.watchFiles;
+      } else {
+        watchFiles = path.join(img.srcDir, '*.png');
+      }
+      initWatcherTask(subTask, watchFiles, item.addToWatchersList, watchTaskName, spritesWatchTasks, buildTaskName);
     });
   };
   for (name in spritesData) {
@@ -261,6 +269,10 @@
   if (spritesBuildTasks.length > 0) {
     gulp.task('sprites', spritesBuildTasks);
     defaultTasks.push('sprites');
+  }
+  if (spritesWatchTasks.length > 0) {
+    gulp.task('sprites-watch', spritesWatchTasks);
+    watchTasks.push('sprites-watch');
   }
   stylesCleanTasks = [];
   stylesBuildTasks = [];
