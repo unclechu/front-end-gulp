@@ -56,18 +56,6 @@ dev-dependencies:
 	\gulp-jshint : '^1'
 	\jshint-stylish : '^1'
 
-peer-dependencies:
-	\gulp.spritesmith : '^1'
-
-	\gulp-stylus : '^1'
-	\gulp-less : '^1'
-
-	\gulp-browserify : '~0.5'
-	\liveify : '1.3.1'
-	\gulp-uglify : '^1'
-	\gulp-jshint : '^1'
-	\jshint-stylish : '^1'
-
 engines:
 	node: '>= 0.10'
 
