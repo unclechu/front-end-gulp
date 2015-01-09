@@ -62,7 +62,7 @@ engines:
 directories:
 	bin: './bin/'
 files:
-	\bin
+	'bin/gulp-wrapper'
 	\LICENSE
 	\README.md
 	\gulpfile.js
