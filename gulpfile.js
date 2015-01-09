@@ -6,7 +6,7 @@
  * @see {@link https://github.com/unclechu/front-end-gulp-pattern|GitHub}
  */
 (function(){
-  var path, fs, argv, gulp, del, tasks, gcb, plumber, gulpif, rename, sourcemaps, pkg, production, ignoreErrors, supportedTypes, watchTasks, defaultTasks, cleanTasks, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, typicalCleanTask, spritesCleanTasks, spritesBuildTasks, spritesData, spriteCleanTask, spriteBuildTask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsInitTasks, cleanData, distCleanData, distCleanTasks;
+  var path, fs, argv, gulp, del, tasks, gcb, plumber, gulpif, rename, sourcemaps, pkg, production, ignoreErrors, supportedTypes, watchTasks, defaultTasks, cleanTasks, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, typicalCleanTask, spritesCleanTasks, spritesBuildTasks, spritesData, spritePreparePaths, spriteCleanTask, spriteBuildTask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsInitTasks, cleanData, distCleanData, distCleanTasks;
   path = require('path');
   fs = require('fs');
   argv = require('yargs').argv;
@@ -114,93 +114,129 @@
   spritesCleanTasks = [];
   spritesBuildTasks = [];
   spritesData = pkg.gulp.sprites || {};
-  spriteCleanTask = function(name, spriteParams, params, cb){
-    var toRemove;
-    toRemove = [path.join(params.cssDir, spriteParams.cssName)];
-    if (params.imgDestDir != null) {
-      toRemove.push(path.join(params.imgDestDir, spriteParams.imgName));
+  spritePreparePaths = function(params, cb){
+    var img, data;
+    img = {};
+    data = {};
+    if (params.path == null) {
+      if (params.imgSrcDir == null || params.imgDestDir == null || params.dataDestDir == null) {
+        throw new Error('Not enough parameters');
+      }
     } else {
-      toRemove.push(path.join(params.imgDir, 'build'));
+      img.srcDir = path.join(params.path, 'src');
+      img.destDir = path.join(params.path, 'build');
+      data.destDir = path.join(params.path, 'build');
     }
-    del(toRemove, {
-      force: true
-    }, cb);
+    if (params.imgSrcDir != null) {
+      img.srcDir = params.imgSrcDir;
+    }
+    if (params.imgDestDir != null) {
+      img.destDir = params.imgDestDir;
+    }
+    if (params.dataDestDir != null) {
+      data.destDir = params.dataDestDir;
+    }
+    img.buildFilePath = path.join(img.destDir, params.imgBuildFile);
+    data.buildFilePath = path.join(data.destDir, params.dataBuildFile);
+    img.publicPath = img.buildFilePath;
+    if (params.imgPublicPath != null) {
+      img.publicPath = params.imgPublicPath;
+    }
+    cb(img, data);
+  };
+  spriteCleanTask = function(name, spriteParams, params, cb){
+    spritePreparePaths(params, function(img, data){
+      var toRemove;
+      toRemove = [data.buildFilePath];
+      if (params.imgDestDir != null) {
+        toRemove.push(img.buildFilePath);
+      } else {
+        toRemove.push(img.destDir);
+      }
+      del(toRemove, {
+        force: true
+      }, cb);
+    });
   };
   spriteBuildTask = function(name, spriteParams, params, cb){
-    var spriteData, ready, postCb, imgDest;
-    spriteData = gulp.src(path.join(params.imgDir, 'src/*.png')).pipe(gulpif(ignoreErrors, plumber({
-      errorHandler: cb
-    }))).pipe(require('gulp.spritesmith')(spriteParams));
-    ready = {
-      img: false,
-      css: false
-    };
-    postCb = function(){
-      if (!ready.img || !ready.css) {
-        return;
-      }
-      cb();
-    };
-    imgDest = path.join(params.imgDir, 'build');
-    if (params.imgDestDir != null) {
-      imgDest = params.imgDestDir;
-    }
-    spriteData.img.pipe(gulp.dest(imgDest)).pipe(gcb(function(){
-      ready.img = true;
-      postCb();
-    }));
-    spriteData.css.pipe(gulp.dest(params.cssDir)).pipe(gcb(function(){
-      ready.css = true;
-      postCb();
-    }));
+    spritePreparePaths(params, function(img, data){
+      var spriteData, ready, postCb;
+      spriteData = gulp.src(path.join(img.srcDir, '*.png')).pipe(gulpif(ignoreErrors, plumber({
+        errorHandler: cb
+      }))).pipe(require('gulp.spritesmith')(spriteParams));
+      ready = {
+        img: false,
+        data: false
+      };
+      postCb = function(){
+        if (!ready.img || !ready.data) {
+          return;
+        }
+        cb();
+      };
+      spriteData.img.pipe(gulp.dest(img.destDir)).pipe(gcb(function(){
+        ready.img = true;
+        postCb();
+      }));
+      spriteData.css.pipe(gulp.dest(data.destDir)).pipe(gcb(function(){
+        ready.data = true;
+        postCb();
+      }));
+    });
   };
   spriteInitTasks = function(name, item, subTask){
-    var imgName, spriteParams, params, cleanTaskName, buildTaskName, preBuildTasks, i$, ref$, len$, taskName;
+    var params;
     subTask == null && (subTask = false);
-    imgName = item.imgName || 'sprite.png';
-    spriteParams = {
-      imgName: imgName,
-      cssName: item.cssName || name + '.css',
-      imgPath: path.join(item.imgPathPrefix, 'build', imgName),
-      padding: item.padding || 1,
-      imgOpts: {
-        format: 'png'
-      },
-      cssVarMap: (function(name){
-        return function(s){
-          s.name = 'sprite-' + name + '-' + s.name;
-        };
-      }.call(this, name)),
-      algorithm: item.algorithm || 'top-down'
-    };
     params = {
-      imgDir: item.imgDir,
-      cssDir: item.cssDir,
-      imgDestDir: item.imgDestDir || null
+      path: item.path || null,
+      imgBuildFile: item.imgBuildFile || 'build.png',
+      imgSrcDir: item.imgSrcDir || null,
+      imgDestDir: item.imgDestDir || null,
+      dataBuildFile: item.dataBuildFile || 'build.json',
+      dataDestDir: item.dataDestDir || null,
+      imgPublicPath: item.imgPublicPath || null
     };
-    cleanTaskName = 'clean-sprite-' + name;
-    buildTaskName = 'sprite-' + name;
-    preBuildTasks = [cleanTaskName];
-    if (item.buildDeps) {
-      for (i$ = 0, len$ = (ref$ = item.buildDeps).length; i$ < len$; ++i$) {
-        taskName = ref$[i$];
-        preBuildTasks.push(taskName);
+    spritePreparePaths(params, function(img, data){
+      var spriteParams, cleanTaskName, buildTaskName, preBuildTasks, i$, ref$, len$, taskName;
+      spriteParams = {
+        imgName: params.imgBuildFile,
+        cssName: params.dataBuildFile,
+        imgPath: img.publicPath,
+        padding: item.padding || 1,
+        imgOpts: {
+          format: 'png'
+        },
+        cssVarMap: (function(name){
+          return function(s){
+            s.name = 'sprite-' + name + '-' + s.name;
+          };
+        }.call(this, name)),
+        algorithm: item.algorithm || 'top-down'
+      };
+      cleanTaskName = 'clean-sprite-' + name;
+      buildTaskName = 'sprite-' + name;
+      preBuildTasks = [cleanTaskName];
+      if (item.buildDeps != null) {
+        for (i$ = 0, len$ = (ref$ = item.buildDeps).length; i$ < len$; ++i$) {
+          taskName = ref$[i$];
+          preBuildTasks.push(taskName);
+        }
       }
-    }
-    gulp.task(cleanTaskName, (function(name, spriteParams, params){
-      return function(cb){
-        spriteCleanTask(name, spriteParams, params, cb);
-      };
-    }.call(this, name, spriteParams, params)));
-    gulp.task(buildTaskName, preBuildTasks, (function(name, spriteParams, params){
-      return function(cb){
-        spriteBuildTask(name, spriteParams, params, cb);
-      };
-    }.call(this, name, spriteParams, params)));
-    spritesCleanTasks.push(cleanTaskName);
-    if (!subTask) {
-      spritesBuildTasks.push(buildTaskName);
-    }
+      gulp.task(cleanTaskName, (function(name, spriteParams, params){
+        return function(cb){
+          spriteCleanTask(name, spriteParams, params, cb);
+        };
+      }.call(this, name, spriteParams, params)));
+      gulp.task(buildTaskName, preBuildTasks, (function(name, spriteParams, params){
+        return function(cb){
+          spriteBuildTask(name, spriteParams, params, cb);
+        };
+      }.call(this, name, spriteParams, params)));
+      spritesCleanTasks.push(cleanTaskName);
+      if (!subTask) {
+        spritesBuildTasks.push(buildTaskName);
+      }
+    });
   };
   for (name in spritesData) {
     item = spritesData[name];

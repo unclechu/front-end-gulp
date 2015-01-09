@@ -121,67 +121,102 @@ sprites-build-tasks = []
 
 sprites-data = pkg.gulp.sprites or {}
 
+# helper
+sprite-prepare-paths = (params, cb) !->
+	img = {}
+	data = {}
+
+	unless params.path?
+		if not params.img-src-dir? or not params.img-dest-dir? or not params.data-dest-dir?
+			throw new Error 'Not enough parameters'
+	else
+		img.src-dir = path.join params.path, \src
+		img.dest-dir = path.join params.path, \build
+		data.dest-dir = path.join params.path, \build
+
+	img.src-dir = params.img-src-dir if params.img-src-dir?
+	img.dest-dir = params.img-dest-dir if params.img-dest-dir?
+	data.dest-dir = params.data-dest-dir if params.data-dest-dir?
+
+	img.build-file-path = path.join img.dest-dir, params.img-build-file
+	data.build-file-path = path.join data.dest-dir, params.data-build-file
+
+	img.public-path = img.build-file-path
+	img.public-path = params.img-public-path if params.img-public-path?
+
+	cb img, data
+
 sprite-clean-task = (name, sprite-params, params, cb) !->
-	to-remove = [ path.join params.css-dir, sprite-params.css-name ]
+	(img, data) <-! sprite-prepare-paths params
+
+	to-remove =
+		data.build-file-path
+		...
 
 	if params.img-dest-dir?
-		to-remove.push path.join params.img-dest-dir, sprite-params.img-name
+		to-remove.push img.build-file-path
 	else
-		to-remove.push path.join params.img-dir, \build
+		to-remove.push img.dest-dir
 
 	del to-remove, force: true, cb
 
 sprite-build-task = (name, sprite-params, params, cb) !->
-	sprite-data = gulp.src path.join params.img-dir, 'src/*.png'
+	(img, data) <-! sprite-prepare-paths params
+
+	sprite-data = gulp.src path.join img.src-dir, '*.png'
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
 		.pipe (require \gulp.spritesmith) sprite-params
 
 	ready =
-		img: false
-		css: false
+		img: no
+		data: no
 
 	postCb = !->
-		return if not ready.img or not ready.css
+		return if not ready.img or not ready.data
 		cb!
 
-	img-dest = path.join params.img-dir, \build
-	if params.img-dest-dir? then img-dest = params.img-dest-dir
-
 	sprite-data.img
-		.pipe gulp.dest img-dest
+		.pipe gulp.dest img.dest-dir
 		.pipe gcb !->
-			ready.img = true
+			ready.img = yes
 			postCb!
 
 	sprite-data.css
-		.pipe gulp.dest params.css-dir
+		.pipe gulp.dest data.dest-dir
 		.pipe gcb !->
-			ready.css = true
+			ready.data = yes
 			postCb!
 
 sprite-init-tasks = (name, item, sub-task=false) !->
-	img-name = item.imgName or \sprite.png
+	params =
+		path: item.path or null
+		img-build-file: item.imgBuildFile or \build.png
+		img-src-dir: item.imgSrcDir or null
+		img-dest-dir: item.imgDestDir or null
+		data-build-file: item.dataBuildFile or \build.json
+		data-dest-dir: item.dataDestDir or null
+		img-public-path: item.imgPublicPath or null
+
+	(img, data) <-! sprite-prepare-paths params
+
 	sprite-params =
-		img-name: img-name
-		css-name: item.cssName or name + \.css
-		img-path: path.join item.imgPathPrefix, \build, img-name
+		img-name: params.img-build-file
+		css-name: params.data-build-file
+		img-path: img.public-path
 		padding: item.padding or 1
 		img-opts: format: \png
 		css-var-map: let name then (s) !->
 			s.name = \sprite- + name + \- + s.name
 		algorithm: item.algorithm or \top-down
 
-	params =
-		img-dir: item.imgDir
-		css-dir: item.cssDir
-		img-dest-dir: item.imgDestDir or null
-
 	clean-task-name = \clean-sprite- + name
 	build-task-name = \sprite- + name
 
-	pre-build-tasks = [ clean-task-name ]
+	pre-build-tasks =
+		clean-task-name
+		...
 
-	if item.buildDeps then
+	if item.buildDeps?
 		for task-name in item.buildDeps
 			pre-build-tasks.push task-name
 
@@ -194,7 +229,7 @@ sprite-init-tasks = (name, item, sub-task=false) !->
 			(cb) !-> sprite-build-task name, sprite-params, params, cb
 
 	sprites-clean-tasks.push clean-task-name
-	if not sub-task then sprites-build-tasks.push build-task-name
+	sprites-build-tasks.push build-task-name unless sub-task
 
 for name, item of sprites-data
 	init-task-iteration name, item, sprite-init-tasks
