@@ -71,7 +71,7 @@
     }
   };
   preparePaths = function(params, cb){
-    var destDir, srcDir, srcFile, exists;
+    var destDir, srcDir, srcFilePath, exists;
     destDir = path.join(params.path, 'build');
     if (params.destDir != null) {
       destDir = params.destDir;
@@ -80,12 +80,12 @@
     if (params.srcDir != null) {
       srcDir = params.srcDir;
     }
-    srcFile = path.join(srcDir, params.mainSrc);
-    exists = fs.existsSync(srcFile);
+    srcFilePath = path.join(srcDir, params.mainSrc);
+    exists = fs.existsSync(srcFilePath);
     if (!exists) {
-      throw new Error("Source file '" + srcFile + "' is not exists");
+      throw new Error("Source file '" + srcFilePath + "' is not exists");
     }
-    cb(srcFile, srcDir, destDir);
+    cb(srcFilePath, srcDir, destDir);
   };
   checkForSupportedType = curry$(function(category, type){
     if (supportedTypes[category] == null) {
@@ -99,7 +99,7 @@
     }
   });
   typicalCleanTask = function(name, params, cb){
-    preparePaths(params, function(srcFile, srcDir, destDir){
+    preparePaths(params, function(srcFilePath, srcDir, destDir){
       var toRemove;
       if (params.destDir != null) {
         toRemove = path.join(destDir, params.buildFile);
@@ -256,7 +256,7 @@
   stylesData = pkg.gulp.styles || {};
   stylesCleanTask = typicalCleanTask;
   stylesBuildTask = function(name, params, cb){
-    preparePaths(params, function(srcFile, srcDir, destDir){
+    preparePaths(params, function(srcFilePath, srcDir, destDir){
       var options, sourceMaps, sourceMapsAsPlugin, plugin, i$, ref$, len$, modulePath;
       options = {
         compress: production
@@ -296,7 +296,7 @@
       default:
         throw Error('unimplemented');
       }
-      gulp.src(srcFile).pipe(gulpif(ignoreErrors, plumber({
+      gulp.src(srcFilePath).pipe(gulpif(ignoreErrors, plumber({
         errorHandler: cb
       }))).pipe(gulpif(sourceMapsAsPlugin, sourcemaps.init())).pipe(plugin(options)).pipe(gulpif(sourceMapsAsPlugin, sourcemaps.write())).pipe(rename(function(buildPath){
         renameBuildFile(buildPath, params.mainSrc, params.buildFile);
@@ -344,7 +344,7 @@
     if (!subTask) {
       stylesBuildTasks.push(buildTaskName);
     }
-    preparePaths(params, function(srcFile, srcDir){
+    preparePaths(params, function(srcFilePath, srcDir){
       var watchFiles;
       switch (false) {
       case item.watchFiles == null:
@@ -384,7 +384,7 @@
   scriptsData = pkg.gulp.scripts || {};
   scriptsCleanTask = typicalCleanTask;
   scriptsJshintTask = function(name, params, cb){
-    preparePaths(params, function(srcFile, srcDir){
+    preparePaths(params, function(srcFilePath, srcDir){
       var jshint, stylish, src, i$, ref$, len$, exclude;
       jshint = require('gulp-jshint');
       stylish = require('jshint-stylish');
@@ -411,8 +411,8 @@
       options.transform = ['liveify'];
       options.extensions = ['.ls'];
     }
-    preparePaths(params, function(srcFile, srcDir, destDir){
-      gulp.src(srcFile, {
+    preparePaths(params, function(srcFilePath, srcDir, destDir){
+      gulp.src(srcFilePath, {
         read: false
       }).pipe(gulpif(ignoreErrors, plumber({
         errorHandler: cb
@@ -440,7 +440,7 @@
     };
     checkForSupportedType('scripts')(
     params.type);
-    preparePaths(params, function(srcFile, srcDir){
+    preparePaths(params, function(srcFilePath, srcDir){
       var key, ref$, shimItem, paramName, val, liveify, i$, len$, exclude, cleanTaskName, buildTaskName, jshintTaskName, watchTaskName, preBuildTasks, taskName, watchFiles;
       if (item.shim != null) {
         for (key in ref$ = params.shim) {

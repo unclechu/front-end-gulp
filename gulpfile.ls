@@ -89,12 +89,12 @@ prepare-paths = (params, cb) !->
 	src-dir = path.join params.path, \src
 	src-dir = params.src-dir if params.src-dir?
 
-	src-file = path.join src-dir, params.main-src
+	src-file-path = path.join src-dir, params.main-src
 
-	exists = fs.exists-sync src-file
-	throw new Error "Source file '#src-file' is not exists" if not exists
+	exists = fs.exists-sync src-file-path
+	throw new Error "Source file '#src-file-path' is not exists" if not exists
 
-	cb src-file, src-dir, dest-dir
+	cb src-file-path, src-dir, dest-dir
 
 check-for-supported-type = (category, type) !-->
 	unless supported-types[category]?
@@ -103,7 +103,7 @@ check-for-supported-type = (category, type) !-->
 		throw new Error "Unknown #category type: '#type'"
 
 typical-clean-task = (name, params, cb) !->
-	(src-file, src-dir, dest-dir) <-! prepare-paths params
+	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
 
 	if params.dest-dir?
 		to-remove = path.join dest-dir, params.build-file
@@ -254,7 +254,7 @@ styles-data = pkg.gulp.styles or {}
 styles-clean-task = typical-clean-task
 
 styles-build-task = (name, params, cb) !->
-	(src-file, src-dir, dest-dir) <-! prepare-paths params
+	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
 
 	options = compress: production
 
@@ -286,7 +286,7 @@ styles-build-task = (name, params, cb) !->
 		plugin = require \gulp-less
 	| _ => ...
 
-	gulp.src src-file
+	gulp.src src-file-path
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
 		.pipe gulpif source-maps-as-plugin, sourcemaps.init!
 		.pipe plugin options
@@ -336,7 +336,7 @@ styles-init-tasks = (name, item, sub-task=false) !->
 
 	# watcher
 
-	(src-file, src-dir) <-! prepare-paths params
+	(src-file-path, src-dir) <-! prepare-paths params
 
 	switch
 	| item.watchFiles?     => watch-files = item.watchFiles
@@ -382,7 +382,7 @@ scripts-data = pkg.gulp.scripts or {}
 scripts-clean-task = typical-clean-task
 
 scripts-jshint-task = (name, params, cb) !->
-	(src-file, src-dir) <-! prepare-paths params
+	(src-file-path, src-dir) <-! prepare-paths params
 
 	require! {
 		\gulp-jshint : jshint
@@ -416,9 +416,9 @@ scripts-build-browserify-task = (name, params, cb) !->
 		options.transform = [ \liveify ]
 		options.extensions = [ \.ls ]
 
-	(src-file, src-dir, dest-dir) <-! prepare-paths params
+	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
 
-	gulp.src src-file, read: false
+	gulp.src src-file-path, read: false
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
 		.pipe (require \gulp-browserify) options
 		.pipe gulpif production, (require \gulp-uglify) preserveComments: \some
@@ -442,7 +442,7 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 
 	params.type |> check-for-supported-type \scripts
 
-	(src-file, src-dir) <-! prepare-paths params
+	(src-file-path, src-dir) <-! prepare-paths params
 
 	# parse relative paths in "shim"
 	if item.shim?
