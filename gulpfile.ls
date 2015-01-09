@@ -8,6 +8,7 @@
 require! {
 	path
 	fs
+
 	yargs : {argv}
 
 	gulp
@@ -15,23 +16,9 @@ require! {
 	\gulp-task-listing : tasks
 	\gulp-callback : gcb
 	\gulp-plumber : plumber
-	\gulp-sourcemaps : sourcemaps
 	\gulp-if : gulpif
 	\gulp-rename : rename
-
-	# sprites
-	\gulp.spritesmith : spritesmith
-
-	# styles
-	\gulp-stylus : stylus
-	\gulp-less : less
-
-	# scripts
-	\gulp-browserify : browserify
-	liveify
-	\gulp-uglify : uglify
-	\gulp-jshint : jshint
-	\jshint-stylish : stylish
+	\gulp-sourcemaps : sourcemaps
 }
 
 pkg = require path.join process.cwd!, './package.json'
@@ -155,7 +142,7 @@ sprite-clean-task = (name, sprite-params, params, cb) !->
 sprite-build-task = (name, sprite-params, params, cb) !->
 	sprite-data = gulp.src path.join params.img-dir, 'src/*.png'
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
-		.pipe spritesmith sprite-params
+		.pipe (require \gulp.spritesmith) sprite-params
 
 	ready =
 		img: false
@@ -265,9 +252,9 @@ styles-build-task = (name, params, cb) !->
 	gulp.src src-file
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
 		.pipe gulpif source-maps-as-plugin, sourcemaps.init!
-		.pipe gulpif params.type is \less, less options
+		.pipe gulpif params.type is \less, (require \gulp-less) options
 		.pipe gulpif source-maps-as-plugin, sourcemaps.write!
-		.pipe gulpif params.type is \stylus, stylus options
+		.pipe gulpif params.type is \stylus, (require \gulp-stylus) options
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest dest-dir
@@ -355,6 +342,11 @@ scripts-clean-task = typical-clean-task
 scripts-jshint-task = (name, params, cb) !->
 	(src-file, src-dir) <-! prepare-paths params
 
+	require! {
+		\gulp-jshint : jshint
+		\jshint-stylish : stylish
+	}
+
 	src =
 		path.join src-dir, '**/*.js'
 		...
@@ -386,8 +378,8 @@ scripts-build-browserify-task = (name, params, cb) !->
 
 	gulp.src src-file, read: false
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
-		.pipe browserify options
-		.pipe gulpif production, uglify preserveComments: \some
+		.pipe (require \gulp-browserify) options
+		.pipe gulpif production, (require \gulp-uglify) preserveComments: \some
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest dest-dir
@@ -419,6 +411,7 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 					delete! shim-item[param-name]
 
 	if params.type is \liveify
+		require! liveify
 		params.jshint-exclude.push path.join src-dir, '**/*.ls'
 
 	if item.jshintRelativeExclude
