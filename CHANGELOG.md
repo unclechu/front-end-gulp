@@ -1,6 +1,23 @@
 Changelog
 =========
 
+0.0.1 / 2015-01-09
+------------------
+
+1. Fixed bugs with custom sources paths for scripts tasks;
+2. Fixed bugs with custom sources paths for styles tasks;
+3. Module "prelude-ls" is no longer required for "liveify" scripts task type;
+4. Module "nib" is no longer required for "stylus" styles task type;
+5. Code refactoring;
+6. Optional modules which provides by your application dependencies;
+7. `gulp-cli` wrapper;
+8. Broken backward compatibility for sprites `package.json` keys for unified
+   keys names style, also new keys available;
+9. Updated dependencies versions;
+10. Watcher for sprites;
+11. Empty tasks removing;
+12. NPM package.
+
 r11 / 2015-01-08
 ----------------
 
