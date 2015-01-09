@@ -6,7 +6,7 @@
  * @see {@link https://github.com/unclechu/front-end-gulp-pattern|GitHub}
  */
 (function(){
-  var path, fs, argv, gulp, del, tasks, gcb, plumber, gulpif, rename, sourcemaps, pkg, production, ignoreErrors, supportedTypes, watchTasks, defaultTasks, cleanTasks, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, typicalCleanTask, spritesCleanTasks, spritesBuildTasks, spritesData, spritePreparePaths, spriteCleanTask, spriteBuildTask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsInitTasks, cleanData, distCleanData, distCleanTasks;
+  var path, fs, argv, gulp, del, tasks, gcb, plumber, gulpif, rename, sourcemaps, pkg, production, ignoreErrors, supportedTypes, watchTasks, defaultTasks, cleanTasks, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, typicalCleanTask, spritesCleanTasks, spritesBuildTasks, spritesData, spritePreparePaths, spriteCleanTask, spriteBuildTask, spriteGetNameByMask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsInitTasks, cleanData, distCleanData, distCleanTasks;
   path = require('path');
   fs = require('fs');
   argv = require('yargs').argv;
@@ -184,6 +184,16 @@
       }));
     });
   };
+  spriteGetNameByMask = function(name, s, mask){
+    var reg, result, item;
+    reg = new RegExp("\\#task-name\\#", 'g');
+    result = '' + mask.replace(reg, name);
+    for (item in s) {
+      reg = new RegExp("\\#" + item + "\\#", 'g');
+      result = result.replace(reg, s[item]);
+    }
+    return result;
+  };
   spriteInitTasks = function(name, item, subTask){
     var params;
     subTask == null && (subTask = false);
@@ -194,7 +204,8 @@
       imgDestDir: item.imgDestDir || null,
       dataBuildFile: item.dataBuildFile || 'build.json',
       dataDestDir: item.dataDestDir || null,
-      imgPublicPath: item.imgPublicPath || null
+      imgPublicPath: item.imgPublicPath || null,
+      dataItemNameMask: item.dataItemNameMask || 'sprite-#task-name#-#name#'
     };
     spritePreparePaths(params, function(img, data){
       var spriteParams, cleanTaskName, buildTaskName, preBuildTasks, i$, ref$, len$, taskName;
@@ -203,15 +214,16 @@
         cssName: params.dataBuildFile,
         imgPath: img.publicPath,
         padding: item.padding || 1,
+        algorithm: item.algorithm || 'top-down',
         imgOpts: {
           format: 'png'
         },
+        cssFormat: item.dataType || void 8,
         cssVarMap: (function(name){
           return function(s){
-            s.name = 'sprite-' + name + '-' + s.name;
+            s.name = spriteGetNameByMask(name, s, params.dataItemNameMask);
           };
-        }.call(this, name)),
-        algorithm: item.algorithm || 'top-down'
+        }.call(this, name))
       };
       cleanTaskName = 'clean-sprite-' + name;
       buildTaskName = 'sprite-' + name;

@@ -187,6 +187,14 @@ sprite-build-task = (name, sprite-params, params, cb) !->
 			ready.data = yes
 			postCb!
 
+sprite-get-name-by-mask = (name, s, mask)->
+	reg = new RegExp "\\\#task-name\\\#", \g
+	result = '' + mask .replace reg, name
+	for item of s
+		reg = new RegExp "\\\##item\\\#", \g
+		result .= replace reg, s[item]
+	result
+
 sprite-init-tasks = (name, item, sub-task=false) !->
 	params =
 		path: item.path or null
@@ -196,6 +204,7 @@ sprite-init-tasks = (name, item, sub-task=false) !->
 		data-build-file: item.dataBuildFile or \build.json
 		data-dest-dir: item.dataDestDir or null
 		img-public-path: item.imgPublicPath or null
+		data-item-name-mask: item.dataItemNameMask or 'sprite-#task-name#-#name#'
 
 	(img, data) <-! sprite-prepare-paths params
 
@@ -204,10 +213,11 @@ sprite-init-tasks = (name, item, sub-task=false) !->
 		css-name: params.data-build-file
 		img-path: img.public-path
 		padding: item.padding or 1
-		img-opts: format: \png
-		css-var-map: let name then (s) !->
-			s.name = \sprite- + name + \- + s.name
 		algorithm: item.algorithm or \top-down
+		img-opts: format: \png
+		css-format: item.dataType or void # default detects by extension
+		css-var-map: let name then (s) !->
+			s.name = sprite-get-name-by-mask name, s, params.data-item-name-mask
 
 	clean-task-name = \clean-sprite- + name
 	build-task-name = \sprite- + name
