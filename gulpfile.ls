@@ -8,21 +8,25 @@
 require! {
 	path
 	fs
+	yargs : {argv}
 
 	gulp
-	\gulp-plumber : plumber
-	yargs : {argv}
-	\gulp-callback : gcb
-
 	del
-	\gulp.spritesmith : spritesmith
 	\gulp-task-listing : tasks
-	\gulp-less : less
+	\gulp-callback : gcb
+	\gulp-plumber : plumber
 	\gulp-sourcemaps : sourcemaps
-	\gulp-stylus : stylus
-	nib
 	\gulp-if : gulpif
 	\gulp-rename : rename
+
+	# sprites
+	\gulp.spritesmith : spritesmith
+
+	# styles
+	\gulp-stylus : stylus
+	\gulp-less : less
+
+	# scripts
 	\gulp-browserify : browserify
 	liveify
 	\gulp-uglify : uglify
@@ -216,8 +220,8 @@ sprite-init-tasks = (name, item, sub-task=false) !->
 for name, item of sprites-data
 	init-task-iteration name, item, sprite-init-tasks
 
-gulp.task \clean-sprites , sprites-clean-tasks
-gulp.task \sprites , sprites-build-tasks
+gulp.task \clean-sprites, sprites-clean-tasks
+gulp.task \sprites, sprites-build-tasks
 
 # sprites }}}1
 
