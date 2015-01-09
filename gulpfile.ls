@@ -30,9 +30,9 @@ require! {
 	\jshint-stylish : stylish
 }
 
-pkg = require path.join process.cwd() , './package.json'
+pkg = require path.join process.cwd!, './package.json'
 
-gulp.task \help , tasks
+gulp.task \help, tasks
 
 production = argv.production?
 
@@ -54,6 +54,7 @@ rename-build-file = (build-path, main-src, build-file) !->
 		build-path.extname = path.extname build-file
 		build-path.basename = path.basename build-file, build-path.extname
 
+# sync
 init-task-iteration = (name, item, init-func) !->
 	init-func name, item
 	if item.sub-tasks then for sub-task-name, sub-task of item.sub-tasks
@@ -82,6 +83,7 @@ init-watcher-task = (
 
 	if add-to-list then watchers-list.push watch-task-name
 
+# sync
 prepare-paths = (params, cb) !->
 	dest-dir = path.join params.path, \build
 	dest-dir = params.dest-dir if params.dest-dir?
@@ -338,16 +340,25 @@ scripts-watch-tasks = []
 scripts-data = pkg.gulp.scripts or {}
 
 scripts-clean-task = (name, params, cb) !->
+	(src-file, src-dir, dest-dir) <-! prepare-paths params
+
 	if params.dest-dir?
-		to-remove = path.join params.dest-dir, params.build-file
+		to-remove = path.join dest-dir, params.build-file
 	else
-		to-remove = path.join params.path, \build
+		to-remove = dest-dir
 
 	del to-remove, force: true, cb
 
 scripts-jshint-task = (name, params, cb) !->
-	src = [ path.join params.path, 'src/**/*.js' ]
-	for exclude in params.jshint-exclude then src.push \! + exclude
+	(src-file, src-dir) <-! prepare-paths params
+
+	src =
+		path.join src-dir, '**/*.js'
+		...
+
+	for exclude in params.jshint-exclude
+		src.push \! + exclude
+
 	gulp.src src
 		.pipe jshint params.jshint-params
 		.pipe jshint.reporter stylish
@@ -383,13 +394,6 @@ scripts-build-browserify-task = (name, params, cb) !->
 		.pipe gcb cb
 
 scripts-init-tasks = (name, item, sub-task=false) !->
-	# parse relative paths in "shim"
-	if item.shim then for key, shim-item of item.shim
-		for param-name, val of shim-item
-			if param-name is \relativePath
-				shim-item.path = path.join item.path, \src, val
-				delete shim-item[param-name]
-
 	params =
 		type: item.type
 		path: item.path
@@ -398,18 +402,28 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 		build-file: item.buildFile
 		dest-dir: item.destDir or null
 		shim: item.shim or {}
-		jshint-disabled: item.jshintDisabled and true or false
-		jshint-params: item.jshintParams and item.jshintParams or null
-		jshint-exclude: item.jshintExclude and item.jshintExclude or []
+		jshint-disabled: item.jshintDisabled?
+		jshint-params: item.jshintParams or null
+		jshint-exclude: item.jshintExclude or []
 
 	params.type |> check-for-supported-type \scripts
 
-	if item.type is \liveify
-		params.jshint-exclude.push path.join item.path, 'src/**/*.ls'
+	(src-file, src-dir) <-! prepare-paths params
+
+	# parse relative paths in "shim"
+	if item.shim?
+		for key, shim-item of params.shim
+			for param-name, val of shim-item
+				if param-name is \relativePath
+					shim-item.path = path.join src-dir, val
+					delete! shim-item[param-name]
+
+	if params.type is \liveify
+		params.jshint-exclude.push path.join src-dir, '**/*.ls'
 
 	if item.jshintRelativeExclude
 		for exclude in item.jshintRelativeExclude
-			params.jshint-exclude.push path.join item.path, \src, exclude
+			params.jshint-exclude.push path.join src-dir, exclude
 
 	if typeof item.debug is \boolean
 		params.debug = item.debug
@@ -419,21 +433,25 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 	jshint-task-name = build-task-name + \-jshint
 	watch-task-name = build-task-name + \-watch
 
-	pre-build-tasks = [ clean-task-name ]
+	pre-build-tasks =
+		clean-task-name
+		...
 
-	if item.buildDeps then
+	if item.buildDeps?
 		for task-name in item.buildDeps
 			pre-build-tasks.push task-name
 
-	if not params.jshint-disabled
+	unless params.jshint-disabled
 		gulp.task jshint-task-name,
-			let name, params then (cb) !-> scripts-jshint-task name, params, cb
+			let name, params
+				(cb) !-> scripts-jshint-task name, params, cb
 		pre-build-tasks.push jshint-task-name
 
 	gulp.task clean-task-name,
-		let name, params then (cb) !-> scripts-clean-task name, params, cb
+		let name, params
+			(cb) !-> scripts-clean-task name, params, cb
 
-	if item.type is \browserify or item.type is \liveify
+	if item.type |> (in <[ browserify liveify ]>)
 		gulp.task build-task-name, pre-build-tasks,
 			let name, params
 				(cb) !-> scripts-build-browserify-task name, params, cb
@@ -441,22 +459,18 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 		...
 
 	scripts-clean-tasks.push clean-task-name
-	if not sub-task then scripts-build-tasks.push build-task-name
+	scripts-build-tasks.push build-task-name unless sub-task
 
 	# watcher
 
-	(src-file, src-dir) <-! prepare-paths params
-
-	if item.watchFiles?
-		watch-files = item.watchFiles
-	else if item.type is \browserify
-		watch-files = path.join src-dir, '**/*.js'
-	else if item.type is \liveify
+	switch
+	| item.watchFiles?         => watch-files = item.watchFiles
+	| item.type is \browserify => watch-files = path.join src-dir, '**/*.js'
+	| item.type is \liveify    =>
 		watch-files =
 			path.join src-dir, '**/*.ls'
 			path.join src-dir, '**/*.js'
-	else
-		...
+	| _ => ...
 
 	init-watcher-task(
 		sub-task
