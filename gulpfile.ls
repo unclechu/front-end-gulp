@@ -378,9 +378,6 @@ scripts-build-browserify-task = (name, params, cb) !->
 	if params.type is \liveify
 		options.transform = [ \liveify ]
 		options.extensions = [ \.ls ]
-		options.shim.prelude =
-			path: './node_modules/prelude-ls'
-			exports: ''
 
 	(src-file, src-dir, dest-dir) <-! prepare-paths params
 
