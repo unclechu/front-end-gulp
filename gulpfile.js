@@ -2,33 +2,26 @@
 /**
  * @version r11
  * @author Viacheslav Lotsmanov
- * @license GNU/GPLv3 (https://github.com/unclechu/web-front-end-gulp-template/blob/master/LICENSE)
- * @see {@link https://github.com/unclechu/web-front-end-gulp-template|GitHub}
+ * @license GNU/GPLv3 (https://raw.githubusercontent.com/unclechu/front-end-gulp-pattern/master/LICENSE)
+ * @see {@link https://github.com/unclechu/front-end-gulp-pattern|GitHub}
  */
 (function(){
-  var path, fs, gulp, plumber, argv, merge, gcb, del, spritesmith, tasks, less, sourcemaps, stylus, nib, gulpif, rename, browserify, liveify, uglify, jshint, stylish, pkg, production, ignoreErrors, supportedTypes, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, cleanData, distCleanData, spritesCleanTasks, spritesBuildTasks, spritesData, spriteCleanTask, spriteBuildTask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsInitTasks;
+  var path, fs, argv, gulp, del, tasks, gcb, plumber, gulpif, rename, sourcemaps, pkg, production, ignoreErrors, supportedTypes, watchTasks, defaultTasks, cleanTasks, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, typicalCleanTask, spritesCleanTasks, spritesBuildTasks, spritesWatchTasks, spritesData, spritePreparePaths, spriteCleanTask, spriteBuildTask, spriteGetNameByMask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsInitTasks, cleanData, distCleanData, distCleanTasks;
   path = require('path');
   fs = require('fs');
-  gulp = require('gulp');
-  plumber = require('gulp-plumber');
   argv = require('yargs').argv;
-  merge = require('merge-stream');
-  gcb = require('gulp-callback');
+  gulp = require('gulp');
   del = require('del');
-  spritesmith = require('gulp.spritesmith');
   tasks = require('gulp-task-listing');
-  less = require('gulp-less');
-  sourcemaps = require('gulp-sourcemaps');
-  stylus = require('gulp-stylus');
-  nib = require('nib');
+  gcb = require('gulp-callback');
+  plumber = require('gulp-plumber');
   gulpif = require('gulp-if');
   rename = require('gulp-rename');
-  browserify = require('gulp-browserify');
-  liveify = require('liveify');
-  uglify = require('gulp-uglify');
-  jshint = require('gulp-jshint');
-  stylish = require('jshint-stylish');
+  sourcemaps = require('gulp-sourcemaps');
   pkg = require(path.join(process.cwd(), './package.json'));
+  if (pkg.gulp == null) {
+    throw new Error('No "gulp" key in package.json');
+  }
   gulp.task('help', tasks);
   production = argv.production != null;
   ignoreErrors = argv['ignore-errors'] != null;
@@ -36,6 +29,9 @@
     styles: ['stylus', 'less'],
     scripts: ['browserify', 'liveify']
   };
+  watchTasks = [];
+  defaultTasks = [];
+  cleanTasks = [];
   renameBuildFile = function(buildPath, mainSrc, buildFile){
     if (buildPath.basename === path.basename(mainSrc, path.extname(mainSrc))) {
       buildPath.extname = path.extname(buildFile);
@@ -75,7 +71,7 @@
     }
   };
   preparePaths = function(params, cb){
-    var destDir, srcDir, srcFile, exists;
+    var destDir, srcDir, srcFilePath, exists;
     destDir = path.join(params.path, 'build');
     if (params.destDir != null) {
       destDir = params.destDir;
@@ -84,12 +80,12 @@
     if (params.srcDir != null) {
       srcDir = params.srcDir;
     }
-    srcFile = path.join(srcDir, params.mainSrc);
-    exists = fs.existsSync(srcFile);
+    srcFilePath = path.join(srcDir, params.mainSrc);
+    exists = fs.existsSync(srcFilePath);
     if (!exists) {
-      throw new Error("Source file '" + srcFile + "' is not exists");
+      throw new Error("Source file '" + srcFilePath + "' is not exists");
     }
-    cb(srcFile, srcDir, destDir);
+    cb(srcFilePath, srcDir, destDir);
   };
   checkForSupportedType = curry$(function(category, type){
     if (supportedTypes[category] == null) {
@@ -102,161 +98,231 @@
       throw new Error("Unknown " + category + " type: '" + type + "'");
     }
   });
-  cleanData = pkg.gulp.clean || [];
-  distCleanData = pkg.gulp.distclean || [];
-  gulp.task('clean', ['clean-sprites', 'clean-styles', 'clean-scripts'], function(cb){
-    del(cleanData, cb);
-  });
-  gulp.task('distclean', ['clean'], function(cb){
-    del(distCleanData, cb);
-  });
+  typicalCleanTask = function(name, params, cb){
+    preparePaths(params, function(srcFilePath, srcDir, destDir){
+      var toRemove;
+      if (params.destDir != null) {
+        toRemove = path.join(destDir, params.buildFile);
+      } else {
+        toRemove = destDir;
+      }
+      del(toRemove, {
+        force: true
+      }, cb);
+    });
+  };
   spritesCleanTasks = [];
   spritesBuildTasks = [];
+  spritesWatchTasks = [];
   spritesData = pkg.gulp.sprites || {};
-  spriteCleanTask = function(name, spriteParams, params, cb){
-    var toRemove;
-    toRemove = [path.join(params.cssDir, spriteParams.cssName)];
-    if (params.imgDestDir != null) {
-      toRemove.push(path.join(params.imgDestDir, spriteParams.imgName));
+  spritePreparePaths = function(params, cb){
+    var img, data;
+    img = {};
+    data = {};
+    if (params.path == null) {
+      if (params.imgSrcDir == null || params.imgDestDir == null || params.dataDestDir == null) {
+        throw new Error('Not enough parameters');
+      }
     } else {
-      toRemove.push(path.join(params.imgDir, 'build'));
+      img.srcDir = path.join(params.path, 'src');
+      img.destDir = path.join(params.path, 'build');
+      data.destDir = path.join(params.path, 'build');
     }
-    del(toRemove, {
-      force: true
-    }, cb);
+    if (params.imgSrcDir != null) {
+      img.srcDir = params.imgSrcDir;
+    }
+    if (params.imgDestDir != null) {
+      img.destDir = params.imgDestDir;
+    }
+    if (params.dataDestDir != null) {
+      data.destDir = params.dataDestDir;
+    }
+    img.buildFilePath = path.join(img.destDir, params.imgBuildFile);
+    data.buildFilePath = path.join(data.destDir, params.dataBuildFile);
+    img.publicPath = img.buildFilePath;
+    if (params.imgPublicPath != null) {
+      img.publicPath = params.imgPublicPath;
+    }
+    cb(img, data);
+  };
+  spriteCleanTask = function(name, spriteParams, params, cb){
+    spritePreparePaths(params, function(img, data){
+      var toRemove;
+      toRemove = [data.buildFilePath];
+      if (params.imgDestDir != null) {
+        toRemove.push(img.buildFilePath);
+      } else {
+        toRemove.push(img.destDir);
+      }
+      del(toRemove, {
+        force: true
+      }, cb);
+    });
   };
   spriteBuildTask = function(name, spriteParams, params, cb){
-    var spriteData, ready, postCb, imgDest;
-    spriteData = gulp.src(path.join(params.imgDir, 'src/*.png')).pipe(gulpif(ignoreErrors, plumber({
-      errorHandler: cb
-    }))).pipe(spritesmith(spriteParams));
-    ready = {
-      img: false,
-      css: false
-    };
-    postCb = function(){
-      if (!ready.img || !ready.css) {
-        return;
-      }
-      cb();
-    };
-    imgDest = path.join(params.imgDir, 'build');
-    if (params.imgDestDir != null) {
-      imgDest = params.imgDestDir;
+    spritePreparePaths(params, function(img, data){
+      var spriteData, ready, postCb;
+      spriteData = gulp.src(path.join(img.srcDir, '*.png')).pipe(gulpif(ignoreErrors, plumber({
+        errorHandler: cb
+      }))).pipe(require('gulp.spritesmith')(spriteParams));
+      ready = {
+        img: false,
+        data: false
+      };
+      postCb = function(){
+        if (!ready.img || !ready.data) {
+          return;
+        }
+        cb();
+      };
+      spriteData.img.pipe(gulp.dest(img.destDir)).pipe(gcb(function(){
+        ready.img = true;
+        postCb();
+      }));
+      spriteData.css.pipe(gulp.dest(data.destDir)).pipe(gcb(function(){
+        ready.data = true;
+        postCb();
+      }));
+    });
+  };
+  spriteGetNameByMask = function(name, s, mask){
+    var reg, result, item;
+    reg = new RegExp("\\#task-name\\#", 'g');
+    result = '' + mask.replace(reg, name);
+    for (item in s) {
+      reg = new RegExp("\\#" + item + "\\#", 'g');
+      result = result.replace(reg, s[item]);
     }
-    spriteData.img.pipe(gulp.dest(imgDest)).pipe(gcb(function(){
-      ready.img = true;
-      postCb();
-    }));
-    spriteData.css.pipe(gulp.dest(params.cssDir)).pipe(gcb(function(){
-      ready.css = true;
-      postCb();
-    }));
+    return result;
   };
   spriteInitTasks = function(name, item, subTask){
-    var imgName, spriteParams, params, cleanTaskName, buildTaskName, preBuildTasks, i$, ref$, len$, taskName;
+    var params;
     subTask == null && (subTask = false);
-    imgName = item.imgName || 'sprite.png';
-    spriteParams = {
-      imgName: imgName,
-      cssName: item.cssName || name + '.css',
-      imgPath: path.join(item.imgPathPrefix, 'build', imgName),
-      padding: item.padding || 1,
-      imgOpts: {
-        format: 'png'
-      },
-      cssVarMap: (function(name){
-        return function(s){
-          s.name = 'sprite-' + name + '-' + s.name;
-        };
-      }.call(this, name)),
-      algorithm: item.algorithm || 'top-down'
-    };
     params = {
-      imgDir: item.imgDir,
-      cssDir: item.cssDir,
-      imgDestDir: item.imgDestDir || null
+      path: item.path || null,
+      imgBuildFile: item.imgBuildFile || 'build.png',
+      imgSrcDir: item.imgSrcDir || null,
+      imgDestDir: item.imgDestDir || null,
+      dataBuildFile: item.dataBuildFile || 'build.json',
+      dataDestDir: item.dataDestDir || null,
+      imgPublicPath: item.imgPublicPath || null,
+      dataItemNameMask: item.dataItemNameMask || 'sprite-#task-name#-#name#'
     };
-    cleanTaskName = 'clean-sprite-' + name;
-    buildTaskName = 'sprite-' + name;
-    preBuildTasks = [cleanTaskName];
-    if (item.buildDeps) {
-      for (i$ = 0, len$ = (ref$ = item.buildDeps).length; i$ < len$; ++i$) {
-        taskName = ref$[i$];
-        preBuildTasks.push(taskName);
+    spritePreparePaths(params, function(img, data){
+      var spriteParams, cleanTaskName, buildTaskName, watchTaskName, preBuildTasks, i$, ref$, len$, taskName, watchFiles;
+      spriteParams = {
+        imgName: params.imgBuildFile,
+        cssName: params.dataBuildFile,
+        imgPath: img.publicPath,
+        padding: item.padding || 1,
+        algorithm: item.algorithm || 'top-down',
+        imgOpts: {
+          format: 'png'
+        },
+        cssFormat: item.dataType || void 8,
+        cssVarMap: (function(name){
+          return function(s){
+            s.name = spriteGetNameByMask(name, s, params.dataItemNameMask);
+          };
+        }.call(this, name))
+      };
+      cleanTaskName = 'clean-sprite-' + name;
+      buildTaskName = 'sprite-' + name;
+      watchTaskName = buildTaskName + '-watch';
+      preBuildTasks = [cleanTaskName];
+      if (item.buildDeps != null) {
+        for (i$ = 0, len$ = (ref$ = item.buildDeps).length; i$ < len$; ++i$) {
+          taskName = ref$[i$];
+          preBuildTasks.push(taskName);
+        }
       }
-    }
-    gulp.task(cleanTaskName, (function(name, spriteParams, params){
-      return function(cb){
-        spriteCleanTask(name, spriteParams, params, cb);
-      };
-    }.call(this, name, spriteParams, params)));
-    gulp.task(buildTaskName, preBuildTasks, (function(name, spriteParams, params){
-      return function(cb){
-        spriteBuildTask(name, spriteParams, params, cb);
-      };
-    }.call(this, name, spriteParams, params)));
-    spritesCleanTasks.push(cleanTaskName);
-    if (!subTask) {
-      spritesBuildTasks.push(buildTaskName);
-    }
+      gulp.task(cleanTaskName, (function(name, spriteParams, params){
+        return function(cb){
+          spriteCleanTask(name, spriteParams, params, cb);
+        };
+      }.call(this, name, spriteParams, params)));
+      gulp.task(buildTaskName, preBuildTasks, (function(name, spriteParams, params){
+        return function(cb){
+          spriteBuildTask(name, spriteParams, params, cb);
+        };
+      }.call(this, name, spriteParams, params)));
+      spritesCleanTasks.push(cleanTaskName);
+      if (!subTask) {
+        spritesBuildTasks.push(buildTaskName);
+      }
+      if (item.watchFiles != null) {
+        watchFiles = item.watchFiles;
+      } else {
+        watchFiles = path.join(img.srcDir, '*.png');
+      }
+      initWatcherTask(subTask, watchFiles, item.addToWatchersList, watchTaskName, spritesWatchTasks, buildTaskName);
+    });
   };
   for (name in spritesData) {
     item = spritesData[name];
     initTaskIteration(name, item, spriteInitTasks);
   }
-  gulp.task('clean-sprites', spritesCleanTasks);
-  gulp.task('sprites', spritesBuildTasks);
+  if (spritesCleanTasks.length > 0) {
+    gulp.task('clean-sprites', spritesCleanTasks);
+    cleanTasks.push('clean-sprites');
+  }
+  if (spritesBuildTasks.length > 0) {
+    gulp.task('sprites', spritesBuildTasks);
+    defaultTasks.push('sprites');
+  }
+  if (spritesWatchTasks.length > 0) {
+    gulp.task('sprites-watch', spritesWatchTasks);
+    watchTasks.push('sprites-watch');
+  }
   stylesCleanTasks = [];
   stylesBuildTasks = [];
   stylesWatchTasks = [];
   stylesData = pkg.gulp.styles || {};
-  stylesCleanTask = function(name, params, cb){
-    var toRemove;
-    if (params.destDir != null) {
-      toRemove = path.join(params.destDir, params.buildFile);
-    } else {
-      toRemove = path.join(params.path, 'build');
-    }
-    del(toRemove, {
-      force: true
-    }, cb);
-  };
+  stylesCleanTask = typicalCleanTask;
   stylesBuildTask = function(name, params, cb){
-    var options, sourceMaps, sourceMapsAsPlugin, use, i$, ref$, len$, modulePath;
-    options = {
-      compress: production
-    };
-    sourceMaps = false;
-    if (params.sourceMaps === true) {
-      sourceMaps = true;
-    } else if (!production && params.sourceMaps !== false) {
-      sourceMaps = true;
-    }
-    sourceMapsAsPlugin = false;
-    if (params.type === 'stylus') {
-      use = [nib()];
-      if (params.shim != null) {
-        for (i$ = 0, len$ = (ref$ = params.shim).length; i$ < len$; ++i$) {
-          modulePath = ref$[i$];
-          use.push(require(path.join(process.cwd(), modulePath)));
+    preparePaths(params, function(srcFilePath, srcDir, destDir){
+      var options, sourceMaps, sourceMapsAsPlugin, plugin, i$, ref$, len$, modulePath;
+      options = {
+        compress: production
+      };
+      sourceMaps = false;
+      if (params.sourceMaps === true) {
+        sourceMaps = true;
+      } else if (!production && params.sourceMaps !== false) {
+        sourceMaps = true;
+      }
+      sourceMapsAsPlugin = false;
+      plugin = null;
+      switch (false) {
+      case params.type !== 'stylus':
+        if (params.shim != null) {
+          options.use = [];
+          for (i$ = 0, len$ = (ref$ = params.shim).length; i$ < len$; ++i$) {
+            modulePath = ref$[i$];
+            options.use.push(require(path.join(process.cwd(), modulePath)));
+          }
         }
+        if (sourceMaps) {
+          options.sourcemap = {
+            inline: true,
+            sourceRoot: '.',
+            basePath: path.join(srcDir)
+          };
+        }
+        plugin = require('gulp-stylus');
+        break;
+      case params.type !== 'less':
+        if (sourceMaps) {
+          sourceMapsAsPlugin = true;
+        }
+        plugin = require('gulp-less');
+        break;
+      default:
+        throw Error('unimplemented');
       }
-      options.use = use;
-      if (sourceMaps) {
-        options.sourcemap = {
-          inline: true,
-          sourceRoot: '.',
-          basePath: path.join(params.path, 'src')
-        };
-      }
-    } else if (params.type === 'less' && sourceMaps) {
-      sourceMapsAsPlugin = true;
-    }
-    preparePaths(params, function(srcFile, srcDir, destDir){
-      gulp.src(srcFile).pipe(gulpif(ignoreErrors, plumber({
+      gulp.src(srcFilePath).pipe(gulpif(ignoreErrors, plumber({
         errorHandler: cb
-      }))).pipe(gulpif(sourceMapsAsPlugin, sourcemaps.init())).pipe(gulpif(params.type === 'less', less(options))).pipe(gulpif(sourceMapsAsPlugin, sourcemaps.write())).pipe(gulpif(params.type === 'stylus', stylus(options))).pipe(rename(function(buildPath){
+      }))).pipe(gulpif(sourceMapsAsPlugin, sourcemaps.init())).pipe(plugin(options)).pipe(gulpif(sourceMapsAsPlugin, sourcemaps.write())).pipe(rename(function(buildPath){
         renameBuildFile(buildPath, params.mainSrc, params.buildFile);
       })).pipe(gulp.dest(destDir)).pipe(gcb(cb));
     });
@@ -282,7 +348,7 @@
     buildTaskName = 'styles-' + name;
     watchTaskName = buildTaskName + '-watch';
     preBuildTasks = [cleanTaskName];
-    if (item.buildDeps) {
+    if (item.buildDeps != null) {
       for (i$ = 0, len$ = (ref$ = item.buildDeps).length; i$ < len$; ++i$) {
         taskName = ref$[i$];
         preBuildTasks.push(taskName);
@@ -302,15 +368,19 @@
     if (!subTask) {
       stylesBuildTasks.push(buildTaskName);
     }
-    preparePaths(params, function(srcFile, srcDir){
+    preparePaths(params, function(srcFilePath, srcDir){
       var watchFiles;
-      if (item.watchFiles != null) {
+      switch (false) {
+      case item.watchFiles == null:
         watchFiles = item.watchFiles;
-      } else if (item.type === 'less') {
+        break;
+      case item.type !== 'less':
         watchFiles = path.join(srcDir, '**/*.less');
-      } else if (item.type === 'stylus') {
+        break;
+      case item.type !== 'stylus':
         watchFiles = [path.join(srcDir, '**/*.styl'), path.join(srcDir, '**/*.stylus')];
-      } else {
+        break;
+      default:
         throw Error('unimplemented');
       }
       initWatcherTask(subTask, watchFiles, item.addToWatchersList, watchTaskName, stylesWatchTasks, buildTaskName);
@@ -320,32 +390,35 @@
     item = stylesData[name];
     initTaskIteration(name, item, stylesInitTasks);
   }
-  gulp.task('clean-styles', stylesCleanTasks);
-  gulp.task('styles', stylesBuildTasks);
-  gulp.task('styles-watch', stylesWatchTasks);
+  if (stylesCleanTasks.length > 0) {
+    gulp.task('clean-styles', stylesCleanTasks);
+    cleanTasks.push('clean-styles');
+  }
+  if (stylesBuildTasks.length > 0) {
+    gulp.task('styles', stylesBuildTasks);
+    defaultTasks.push('styles');
+  }
+  if (stylesWatchTasks.length > 0) {
+    gulp.task('styles-watch', stylesWatchTasks);
+    watchTasks.push('styles-watch');
+  }
   scriptsCleanTasks = [];
   scriptsBuildTasks = [];
   scriptsWatchTasks = [];
   scriptsData = pkg.gulp.scripts || {};
-  scriptsCleanTask = function(name, params, cb){
-    var toRemove;
-    if (params.destDir != null) {
-      toRemove = path.join(params.destDir, params.buildFile);
-    } else {
-      toRemove = path.join(params.path, 'build');
-    }
-    del(toRemove, {
-      force: true
-    }, cb);
-  };
+  scriptsCleanTask = typicalCleanTask;
   scriptsJshintTask = function(name, params, cb){
-    var src, i$, ref$, len$, exclude;
-    src = [path.join(params.path, 'src/**/*.js')];
-    for (i$ = 0, len$ = (ref$ = params.jshintExclude).length; i$ < len$; ++i$) {
-      exclude = ref$[i$];
-      src.push('!' + exclude);
-    }
-    gulp.src(src).pipe(jshint(params.jshintParams)).pipe(jshint.reporter(stylish)).pipe(rename('x')).end(cb);
+    preparePaths(params, function(srcFilePath, srcDir){
+      var jshint, stylish, src, i$, ref$, len$, exclude;
+      jshint = require('gulp-jshint');
+      stylish = require('jshint-stylish');
+      src = [path.join(srcDir, '**/*.js')];
+      for (i$ = 0, len$ = (ref$ = params.jshintExclude).length; i$ < len$; ++i$) {
+        exclude = ref$[i$];
+        src.push('!' + exclude);
+      }
+      gulp.src(src).pipe(jshint(params.jshintParams)).pipe(jshint.reporter(stylish)).pipe(rename('x')).end(cb);
+    });
   };
   scriptsBuildBrowserifyTask = function(name, params, cb){
     var options;
@@ -361,17 +434,13 @@
     if (params.type === 'liveify') {
       options.transform = ['liveify'];
       options.extensions = ['.ls'];
-      options.shim.prelude = {
-        path: './node_modules/prelude-ls',
-        exports: ''
-      };
     }
-    preparePaths(params, function(srcFile, srcDir, destDir){
-      gulp.src(srcFile, {
+    preparePaths(params, function(srcFilePath, srcDir, destDir){
+      gulp.src(srcFilePath, {
         read: false
       }).pipe(gulpif(ignoreErrors, plumber({
         errorHandler: cb
-      }))).pipe(browserify(options)).pipe(gulpif(production, uglify({
+      }))).pipe(require('gulp-browserify')(options)).pipe(gulpif(production, require('gulp-uglify')({
         preserveComments: 'some'
       }))).pipe(rename(function(buildPath){
         renameBuildFile(buildPath, params.mainSrc, params.buildFile);
@@ -379,20 +448,8 @@
     });
   };
   scriptsInitTasks = function(name, item, subTask){
-    var key, ref$, shimItem, paramName, val, params, i$, len$, exclude, cleanTaskName, buildTaskName, jshintTaskName, watchTaskName, preBuildTasks, taskName;
+    var params;
     subTask == null && (subTask = false);
-    if (item.shim) {
-      for (key in ref$ = item.shim) {
-        shimItem = ref$[key];
-        for (paramName in shimItem) {
-          val = shimItem[paramName];
-          if (paramName === 'relativePath') {
-            shimItem.path = path.join(item.path, 'src', val);
-            delete shimItem[paramName];
-          }
-        }
-      }
-    }
     params = {
       type: item.type,
       path: item.path,
@@ -402,69 +459,89 @@
       destDir: item.destDir || null,
       shim: item.shim || {},
       jshintDisabled: item.jshintDisabled && true || false,
-      jshintParams: item.jshintParams && item.jshintParams || null,
-      jshintExclude: item.jshintExclude && item.jshintExclude || []
+      jshintParams: item.jshintParams || null,
+      jshintExclude: item.jshintExclude || []
     };
     checkForSupportedType('scripts')(
     params.type);
-    if (item.type === 'liveify') {
-      params.jshintExclude.push(path.join(item.path, 'src/**/*.ls'));
-    }
-    if (item.jshintRelativeExclude) {
-      for (i$ = 0, len$ = (ref$ = item.jshintRelativeExclude).length; i$ < len$; ++i$) {
-        exclude = ref$[i$];
-        params.jshintExclude.push(path.join(item.path, 'src', exclude));
+    preparePaths(params, function(srcFilePath, srcDir){
+      var key, ref$, shimItem, paramName, val, liveify, i$, len$, exclude, cleanTaskName, buildTaskName, jshintTaskName, watchTaskName, preBuildTasks, taskName, watchFiles;
+      if (item.shim != null) {
+        for (key in ref$ = params.shim) {
+          shimItem = ref$[key];
+          for (paramName in shimItem) {
+            val = shimItem[paramName];
+            if (paramName === 'relativePath') {
+              shimItem.path = path.join(srcDir, val);
+              delete shimItem[paramName];
+            }
+          }
+        }
       }
-    }
-    if (typeof item.debug === 'boolean') {
-      params.debug = item.debug;
-    }
-    cleanTaskName = 'clean-scripts-' + name;
-    buildTaskName = 'scripts-' + name;
-    jshintTaskName = buildTaskName + '-jshint';
-    watchTaskName = buildTaskName + '-watch';
-    preBuildTasks = [cleanTaskName];
-    if (item.buildDeps) {
-      for (i$ = 0, len$ = (ref$ = item.buildDeps).length; i$ < len$; ++i$) {
-        taskName = ref$[i$];
-        preBuildTasks.push(taskName);
+      if (params.type === 'liveify') {
+        liveify = require('liveify');
+        params.jshintExclude.push(path.join(srcDir, '**/*.ls'));
       }
-    }
-    if (!params.jshintDisabled) {
-      gulp.task(jshintTaskName, (function(name, params){
+      if (item.jshintRelativeExclude) {
+        for (i$ = 0, len$ = (ref$ = item.jshintRelativeExclude).length; i$ < len$; ++i$) {
+          exclude = ref$[i$];
+          params.jshintExclude.push(path.join(srcDir, exclude));
+        }
+      }
+      if (typeof item.debug === 'boolean') {
+        params.debug = item.debug;
+      }
+      cleanTaskName = 'clean-scripts-' + name;
+      buildTaskName = 'scripts-' + name;
+      jshintTaskName = buildTaskName + '-jshint';
+      watchTaskName = buildTaskName + '-watch';
+      preBuildTasks = [cleanTaskName];
+      if (item.buildDeps != null) {
+        for (i$ = 0, len$ = (ref$ = item.buildDeps).length; i$ < len$; ++i$) {
+          taskName = ref$[i$];
+          preBuildTasks.push(taskName);
+        }
+      }
+      if (!params.jshintDisabled) {
+        gulp.task(jshintTaskName, (function(name, params){
+          return function(cb){
+            scriptsJshintTask(name, params, cb);
+          };
+        }.call(this, name, params)));
+        preBuildTasks.push(jshintTaskName);
+      }
+      gulp.task(cleanTaskName, (function(name, params){
         return function(cb){
-          scriptsJshintTask(name, params, cb);
+          scriptsCleanTask(name, params, cb);
         };
       }.call(this, name, params)));
-      preBuildTasks.push(jshintTaskName);
-    }
-    gulp.task(cleanTaskName, (function(name, params){
-      return function(cb){
-        scriptsCleanTask(name, params, cb);
-      };
-    }.call(this, name, params)));
-    if (item.type === 'browserify' || item.type === 'liveify') {
-      gulp.task(buildTaskName, preBuildTasks, (function(name, params){
-        return function(cb){
-          scriptsBuildBrowserifyTask(name, params, cb);
-        };
-      }.call(this, name, params)));
-    } else {
-      throw Error('unimplemented');
-    }
-    scriptsCleanTasks.push(cleanTaskName);
-    if (!subTask) {
-      scriptsBuildTasks.push(buildTaskName);
-    }
-    preparePaths(params, function(srcFile, srcDir){
-      var watchFiles;
-      if (item.watchFiles != null) {
-        watchFiles = item.watchFiles;
-      } else if (item.type === 'browserify') {
-        watchFiles = path.join(srcDir, '**/*.js');
-      } else if (item.type === 'liveify') {
-        watchFiles = [path.join(srcDir, '**/*.ls'), path.join(srcDir, '**/*.js')];
+      if ((function(it){
+        return it === 'browserify' || it === 'liveify';
+      })(
+      item.type)) {
+        gulp.task(buildTaskName, preBuildTasks, (function(name, params){
+          return function(cb){
+            scriptsBuildBrowserifyTask(name, params, cb);
+          };
+        }.call(this, name, params)));
       } else {
+        throw Error('unimplemented');
+      }
+      scriptsCleanTasks.push(cleanTaskName);
+      if (!subTask) {
+        scriptsBuildTasks.push(buildTaskName);
+      }
+      switch (false) {
+      case item.watchFiles == null:
+        watchFiles = item.watchFiles;
+        break;
+      case item.type !== 'browserify':
+        watchFiles = path.join(srcDir, '**/*.js');
+        break;
+      case item.type !== 'liveify':
+        watchFiles = [path.join(srcDir, '**/*.ls'), path.join(srcDir, '**/*.js')];
+        break;
+      default:
         throw Error('unimplemented');
       }
       initWatcherTask(subTask, watchFiles, item.addToWatchersList, watchTaskName, scriptsWatchTasks, buildTaskName);
@@ -474,11 +551,38 @@
     item = scriptsData[name];
     initTaskIteration(name, item, scriptsInitTasks);
   }
-  gulp.task('clean-scripts', scriptsCleanTasks);
-  gulp.task('scripts', scriptsBuildTasks);
-  gulp.task('scripts-watch', scriptsWatchTasks);
-  gulp.task('watch', ['styles-watch', 'scripts-watch']);
-  gulp.task('default', ['sprites', 'styles', 'scripts']);
+  if (scriptsCleanTasks.length > 0) {
+    gulp.task('clean-scripts', scriptsCleanTasks);
+    cleanTasks.push('clean-scripts');
+  }
+  if (scriptsBuildTasks.length > 0) {
+    gulp.task('scripts', scriptsBuildTasks);
+    defaultTasks.push('scripts');
+  }
+  if (scriptsWatchTasks.length > 0) {
+    gulp.task('scripts-watch', scriptsWatchTasks);
+    watchTasks.push('scripts-watch');
+  }
+  cleanData = pkg.gulp.clean || [];
+  distCleanData = pkg.gulp.distclean || [];
+  distCleanTasks = [];
+  if (cleanData.length > 0 || cleanTasks.length > 0) {
+    gulp.task('clean', cleanTasks, function(cb){
+      del(cleanData, cb);
+    });
+    distCleanTasks.push('clean');
+  }
+  if (distCleanTasks.length > 0 || distCleanData.length > 0) {
+    gulp.task('distclean', distCleanTasks, function(cb){
+      del(distCleanData, cb);
+    });
+  }
+  if (watchTasks.length > 0) {
+    gulp.task('watch', watchTasks);
+  }
+  if (defaultTasks.length > 0) {
+    gulp.task('default', defaultTasks);
+  }
   function clone$(it){
     function fun(){} fun.prototype = it;
     return new fun;

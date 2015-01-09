@@ -1,8 +1,8 @@
 /**
  * @version r11
  * @author Viacheslav Lotsmanov
- * @license GNU/GPLv3 (https://github.com/unclechu/web-front-end-gulp-template/blob/master/LICENSE)
- * @see {@link https://github.com/unclechu/web-front-end-gulp-template|GitHub}
+ * @license GNU/GPLv3 (https://raw.githubusercontent.com/unclechu/front-end-gulp-pattern/master/LICENSE)
+ * @see {@link https://github.com/unclechu/front-end-gulp-pattern|GitHub}
  */
 
 require! {
@@ -23,6 +23,9 @@ require! {
 
 pkg = require path.join process.cwd!, './package.json'
 
+unless pkg.gulp?
+	throw new Error 'No "gulp" key in package.json'
+
 gulp.task \help, tasks
 
 production = argv.production?
@@ -37,6 +40,10 @@ supported-types =
 	scripts:
 		\browserify
 		\liveify
+
+watch-tasks = []
+default-tasks = []
+clean-tasks = []
 
 # helpers {{{1
 
@@ -82,12 +89,12 @@ prepare-paths = (params, cb) !->
 	src-dir = path.join params.path, \src
 	src-dir = params.src-dir if params.src-dir?
 
-	src-file = path.join src-dir, params.main-src
+	src-file-path = path.join src-dir, params.main-src
 
-	exists = fs.exists-sync src-file
-	throw new Error "Source file '#src-file' is not exists" if not exists
+	exists = fs.exists-sync src-file-path
+	throw new Error "Source file '#src-file-path' is not exists" if not exists
 
-	cb src-file, src-dir, dest-dir
+	cb src-file-path, src-dir, dest-dir
 
 check-for-supported-type = (category, type) !-->
 	unless supported-types[category]?
@@ -96,7 +103,7 @@ check-for-supported-type = (category, type) !-->
 		throw new Error "Unknown #category type: '#type'"
 
 typical-clean-task = (name, params, cb) !->
-	(src-file, src-dir, dest-dir) <-! prepare-paths params
+	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
 
 	if params.dest-dir?
 		to-remove = path.join dest-dir, params.build-file
@@ -107,89 +114,121 @@ typical-clean-task = (name, params, cb) !->
 
 # helpers }}}1
 
-# clean {{{1
-
-clean-data = pkg.gulp.clean or []
-dist-clean-data = pkg.gulp.distclean or []
-
-gulp.task \clean , [
-	\clean-sprites
-	\clean-styles
-	\clean-scripts
-], (cb) !-> del clean-data , cb
-
-gulp.task \distclean , [ \clean ], (cb) !-> del dist-clean-data , cb
-
-# clean }}}1
-
 # sprites {{{1
 
 sprites-clean-tasks = []
 sprites-build-tasks = []
+sprites-watch-tasks = []
 
 sprites-data = pkg.gulp.sprites or {}
 
+# helper
+sprite-prepare-paths = (params, cb) !->
+	img = {}
+	data = {}
+
+	unless params.path?
+		if not params.img-src-dir? or not params.img-dest-dir? or not params.data-dest-dir?
+			throw new Error 'Not enough parameters'
+	else
+		img.src-dir = path.join params.path, \src
+		img.dest-dir = path.join params.path, \build
+		data.dest-dir = path.join params.path, \build
+
+	img.src-dir = params.img-src-dir if params.img-src-dir?
+	img.dest-dir = params.img-dest-dir if params.img-dest-dir?
+	data.dest-dir = params.data-dest-dir if params.data-dest-dir?
+
+	img.build-file-path = path.join img.dest-dir, params.img-build-file
+	data.build-file-path = path.join data.dest-dir, params.data-build-file
+
+	img.public-path = img.build-file-path
+	img.public-path = params.img-public-path if params.img-public-path?
+
+	cb img, data
+
 sprite-clean-task = (name, sprite-params, params, cb) !->
-	to-remove = [ path.join params.css-dir, sprite-params.css-name ]
+	(img, data) <-! sprite-prepare-paths params
+
+	to-remove =
+		data.build-file-path
+		...
 
 	if params.img-dest-dir?
-		to-remove.push path.join params.img-dest-dir, sprite-params.img-name
+		to-remove.push img.build-file-path
 	else
-		to-remove.push path.join params.img-dir, \build
+		to-remove.push img.dest-dir
 
 	del to-remove, force: true, cb
 
 sprite-build-task = (name, sprite-params, params, cb) !->
-	sprite-data = gulp.src path.join params.img-dir, 'src/*.png'
+	(img, data) <-! sprite-prepare-paths params
+
+	sprite-data = gulp.src path.join img.src-dir, '*.png'
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
 		.pipe (require \gulp.spritesmith) sprite-params
 
 	ready =
-		img: false
-		css: false
+		img: no
+		data: no
 
 	postCb = !->
-		return if not ready.img or not ready.css
+		return if not ready.img or not ready.data
 		cb!
 
-	img-dest = path.join params.img-dir, \build
-	if params.img-dest-dir? then img-dest = params.img-dest-dir
-
 	sprite-data.img
-		.pipe gulp.dest img-dest
+		.pipe gulp.dest img.dest-dir
 		.pipe gcb !->
-			ready.img = true
+			ready.img = yes
 			postCb!
 
 	sprite-data.css
-		.pipe gulp.dest params.css-dir
+		.pipe gulp.dest data.dest-dir
 		.pipe gcb !->
-			ready.css = true
+			ready.data = yes
 			postCb!
 
-sprite-init-tasks = (name, item, sub-task=false) !->
-	img-name = item.imgName or \sprite.png
-	sprite-params =
-		img-name: img-name
-		css-name: item.cssName or name + \.css
-		img-path: path.join item.imgPathPrefix, \build, img-name
-		padding: item.padding or 1
-		img-opts: format: \png
-		css-var-map: let name then (s) !->
-			s.name = \sprite- + name + \- + s.name
-		algorithm: item.algorithm or \top-down
+sprite-get-name-by-mask = (name, s, mask)->
+	reg = new RegExp "\\\#task-name\\\#", \g
+	result = '' + mask .replace reg, name
+	for item of s
+		reg = new RegExp "\\\##item\\\#", \g
+		result .= replace reg, s[item]
+	result
 
+sprite-init-tasks = (name, item, sub-task=false) !->
 	params =
-		img-dir: item.imgDir
-		css-dir: item.cssDir
+		path: item.path or null
+		img-build-file: item.imgBuildFile or \build.png
+		img-src-dir: item.imgSrcDir or null
 		img-dest-dir: item.imgDestDir or null
+		data-build-file: item.dataBuildFile or \build.json
+		data-dest-dir: item.dataDestDir or null
+		img-public-path: item.imgPublicPath or null
+		data-item-name-mask: item.dataItemNameMask or 'sprite-#task-name#-#name#'
+
+	(img, data) <-! sprite-prepare-paths params
+
+	sprite-params =
+		img-name: params.img-build-file
+		css-name: params.data-build-file
+		img-path: img.public-path
+		padding: item.padding or 1
+		algorithm: item.algorithm or \top-down
+		img-opts: format: \png
+		css-format: item.dataType or void # default detects by extension
+		css-var-map: let name then (s) !->
+			s.name = sprite-get-name-by-mask name, s, params.data-item-name-mask
 
 	clean-task-name = \clean-sprite- + name
 	build-task-name = \sprite- + name
+	watch-task-name = build-task-name + \-watch
 
-	pre-build-tasks = [ clean-task-name ]
+	pre-build-tasks =
+		clean-task-name
+		...
 
-	if item.buildDeps then
+	if item.buildDeps?
 		for task-name in item.buildDeps
 			pre-build-tasks.push task-name
 
@@ -202,13 +241,36 @@ sprite-init-tasks = (name, item, sub-task=false) !->
 			(cb) !-> sprite-build-task name, sprite-params, params, cb
 
 	sprites-clean-tasks.push clean-task-name
-	if not sub-task then sprites-build-tasks.push build-task-name
+	sprites-build-tasks.push build-task-name unless sub-task
+
+	# watcher
+
+	if item.watchFiles?
+		watch-files = item.watchFiles
+	else
+		watch-files = path.join img.src-dir, '*.png'
+
+	init-watcher-task(
+		sub-task
+		watch-files
+		item.addToWatchersList
+		watch-task-name
+		sprites-watch-tasks
+		build-task-name
+	)
 
 for name, item of sprites-data
 	init-task-iteration name, item, sprite-init-tasks
 
-gulp.task \clean-sprites, sprites-clean-tasks
-gulp.task \sprites, sprites-build-tasks
+if sprites-clean-tasks.length > 0
+	gulp.task \clean-sprites, sprites-clean-tasks
+	clean-tasks.push \clean-sprites
+if sprites-build-tasks.length > 0
+	gulp.task \sprites, sprites-build-tasks
+	default-tasks.push \sprites
+if sprites-watch-tasks.length > 0
+	gulp.task \sprites-watch, sprites-watch-tasks
+	watch-tasks.push \sprites-watch
 
 # sprites }}}1
 
@@ -223,7 +285,7 @@ styles-data = pkg.gulp.styles or {}
 styles-clean-task = typical-clean-task
 
 styles-build-task = (name, params, cb) !->
-	(src-file, src-dir, dest-dir) <-! prepare-paths params
+	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
 
 	options = compress: production
 
@@ -233,7 +295,10 @@ styles-build-task = (name, params, cb) !->
 	else if not production and params.source-maps is not false
 		source-maps = true
 
+	# only for less
 	source-maps-as-plugin = false
+
+	plugin = null
 
 	switch
 	| params.type is \stylus =>
@@ -246,15 +311,17 @@ styles-build-task = (name, params, cb) !->
 				inline: true
 				sourceRoot: \.
 				basePath: path.join src-dir
-	| params.type is \less   => source-maps-as-plugin = true if source-maps
+		plugin = require \gulp-stylus
+	| params.type is \less =>
+		source-maps-as-plugin = true if source-maps
+		plugin = require \gulp-less
 	| _ => ...
 
-	gulp.src src-file
+	gulp.src src-file-path
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
 		.pipe gulpif source-maps-as-plugin, sourcemaps.init!
-		.pipe gulpif params.type is \less, (require \gulp-less) options
+		.pipe plugin options
 		.pipe gulpif source-maps-as-plugin, sourcemaps.write!
-		.pipe gulpif params.type is \stylus, (require \gulp-stylus) options
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest dest-dir
@@ -300,7 +367,7 @@ styles-init-tasks = (name, item, sub-task=false) !->
 
 	# watcher
 
-	(src-file, src-dir) <-! prepare-paths params
+	(src-file-path, src-dir) <-! prepare-paths params
 
 	switch
 	| item.watchFiles?     => watch-files = item.watchFiles
@@ -323,9 +390,15 @@ styles-init-tasks = (name, item, sub-task=false) !->
 for name, item of styles-data
 	init-task-iteration name, item, styles-init-tasks
 
-gulp.task \clean-styles, styles-clean-tasks
-gulp.task \styles, styles-build-tasks
-gulp.task \styles-watch, styles-watch-tasks
+if styles-clean-tasks.length > 0
+	gulp.task \clean-styles, styles-clean-tasks
+	clean-tasks.push \clean-styles
+if styles-build-tasks.length > 0
+	gulp.task \styles, styles-build-tasks
+	default-tasks.push \styles
+if styles-watch-tasks.length > 0
+	gulp.task \styles-watch, styles-watch-tasks
+	watch-tasks.push \styles-watch
 
 # styles }}}1
 
@@ -340,7 +413,7 @@ scripts-data = pkg.gulp.scripts or {}
 scripts-clean-task = typical-clean-task
 
 scripts-jshint-task = (name, params, cb) !->
-	(src-file, src-dir) <-! prepare-paths params
+	(src-file-path, src-dir) <-! prepare-paths params
 
 	require! {
 		\gulp-jshint : jshint
@@ -374,9 +447,9 @@ scripts-build-browserify-task = (name, params, cb) !->
 		options.transform = [ \liveify ]
 		options.extensions = [ \.ls ]
 
-	(src-file, src-dir, dest-dir) <-! prepare-paths params
+	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
 
-	gulp.src src-file, read: false
+	gulp.src src-file-path, read: false
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
 		.pipe (require \gulp-browserify) options
 		.pipe gulpif production, (require \gulp-uglify) preserveComments: \some
@@ -400,7 +473,7 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 
 	params.type |> check-for-supported-type \scripts
 
-	(src-file, src-dir) <-! prepare-paths params
+	(src-file-path, src-dir) <-! prepare-paths params
 
 	# parse relative paths in "shim"
 	if item.shim?
@@ -477,19 +550,32 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 for name, item of scripts-data
 	init-task-iteration name, item, scripts-init-tasks
 
-gulp.task \clean-scripts, scripts-clean-tasks
-gulp.task \scripts, scripts-build-tasks
-gulp.task \scripts-watch, scripts-watch-tasks
+if scripts-clean-tasks.length > 0
+	gulp.task \clean-scripts, scripts-clean-tasks
+	clean-tasks.push \clean-scripts
+if scripts-build-tasks.length > 0
+	gulp.task \scripts, scripts-build-tasks
+	default-tasks.push \scripts
+if scripts-watch-tasks.length > 0
+	gulp.task \scripts-watch, scripts-watch-tasks
+	watch-tasks.push \scripts-watch
 
 # scripts }}}1
 
-gulp.task \watch [
-	\styles-watch
-	\scripts-watch
-]
+# clean {{{1
 
-gulp.task \default [
-	\sprites
-	\styles
-	\scripts
-]
+clean-data = pkg.gulp.clean or []
+dist-clean-data = pkg.gulp.distclean or []
+dist-clean-tasks = []
+
+if clean-data.length > 0 or clean-tasks.length > 0
+	gulp.task \clean, clean-tasks, (cb) !-> del clean-data , cb
+	dist-clean-tasks.push \clean
+
+if dist-clean-tasks.length > 0 or dist-clean-data.length > 0
+	gulp.task \distclean , dist-clean-tasks, (cb) !-> del dist-clean-data , cb
+
+# clean }}}1
+
+gulp.task \watch, watch-tasks if watch-tasks.length > 0
+gulp.task \default default-tasks if default-tasks.length > 0

@@ -1,4 +1,8 @@
-web-front-end-gulp-template
-===========================
+front-end-gulp-pattern
+======================
 
-Web front-end project template based on Gulp
+`gulp-cli` wrapper with own read-only `gulpfile` for front-end.
+
+Provides own `gulp-cli` binary as `font-end-gulp`.
+
+Should be configured by `package.json`.
