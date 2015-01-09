@@ -45,7 +45,7 @@ dependencies:
 dev-dependencies:
 	\LiveScript : '1.3.1'
 
-	\gulp.spritesmith : '^1'
+	\gulp.spritesmith : '^2'
 
 	\gulp-stylus : '^1'
 	\gulp-less : '^1'
