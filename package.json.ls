@@ -1,5 +1,5 @@
 name: \front-end-gulp-pattern
-version: '1.0.0'
+version: '1.0.1'
 
 description: 'gulp-cli wrapper with own read-only gulpfile for front-end.'
 keywords:
@@ -47,7 +47,7 @@ dev-dependencies:
 
 	\gulp.spritesmith : '^2'
 
-	\gulp-stylus : '^1'
+	\gulp-stylus : '^1.3.6'
 	\gulp-less : '^1'
 
 	\gulp-browserify : '~0.5'

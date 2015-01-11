@@ -294,22 +294,19 @@ styles-build-task = (name, params, cb) !->
 	else if not production and params.source-maps is not false
 		source-maps = true
 
-	# only for less
 	source-maps-as-plugin = false
 
 	plugin = null
 
 	switch
 	| params.type is \stylus =>
+		# stylus-shim
 		if params.shim?
 			options.use = []
 			for module-path in params.shim
 				options.use.push require path.join process.cwd!, module-path
-		if source-maps
-			options.sourcemap =
-				inline: true
-				sourceRoot: \.
-				basePath: path.join src-dir
+
+		source-maps-as-plugin = true if source-maps
 		plugin = require \gulp-stylus
 	| params.type is \less =>
 		source-maps-as-plugin = true if source-maps

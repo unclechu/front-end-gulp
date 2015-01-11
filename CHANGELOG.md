@@ -1,6 +1,11 @@
 Changelog
 =========
 
+1.0.1 / 2015-01-11
+
+1. Fixes for `gulp-stylus` that broke backward compatibility, sourcemaps
+   now provides by `gulp-sourcemaps` (as plugin).
+
 1.0.0 / 2015-01-11
 ------------------
 

@@ -302,11 +302,7 @@
           }
         }
         if (sourceMaps) {
-          options.sourcemap = {
-            inline: true,
-            sourceRoot: '.',
-            basePath: path.join(srcDir)
-          };
+          sourceMapsAsPlugin = true;
         }
         plugin = require('gulp-stylus');
         break;
