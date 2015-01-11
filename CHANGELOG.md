@@ -1,6 +1,13 @@
 Changelog
 =========
 
+1.0.0 / 2015-01-11
+------------------
+
+1. Browserify transforms now provided by `package.json`, no longer need to
+   modify `front-end-gulp-pattern` for support new transform
+   (see for "transform" and "extensions" keys in `package.json`).
+
 0.0.1 / 2015-01-09
 ------------------
 

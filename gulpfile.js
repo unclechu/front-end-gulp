@@ -26,7 +26,7 @@
   ignoreErrors = argv['ignore-errors'] != null;
   supportedTypes = {
     styles: ['stylus', 'less'],
-    scripts: ['browserify', 'liveify']
+    scripts: ['browserify']
   };
   watchTasks = [];
   defaultTasks = [];
@@ -430,9 +430,11 @@
     } else if (!production && params.debug !== false) {
       options.debug = true;
     }
-    if (params.type === 'liveify') {
-      options.transform = ['liveify'];
-      options.extensions = ['.ls'];
+    if (params.transform != null) {
+      options.transform = params.transform;
+    }
+    if (params.extensions != null) {
+      options.extensions = params.extensions;
     }
     preparePaths(params, function(srcFilePath, srcDir, destDir){
       gulp.src(srcFilePath, {
@@ -459,12 +461,14 @@
       shim: item.shim || {},
       jshintDisabled: item.jshintDisabled && true || false,
       jshintParams: item.jshintParams || null,
-      jshintExclude: item.jshintExclude || []
+      jshintExclude: item.jshintExclude || [],
+      transform: item.transform || null,
+      extensions: item.extensions || null
     };
     checkForSupportedType('scripts')(
     params.type);
     preparePaths(params, function(srcFilePath, srcDir){
-      var key, ref$, shimItem, paramName, val, liveify, i$, len$, exclude, cleanTaskName, buildTaskName, jshintTaskName, watchTaskName, preBuildTasks, taskName, watchFiles;
+      var key, ref$, shimItem, paramName, val, i$, len$, exclude, cleanTaskName, buildTaskName, jshintTaskName, watchTaskName, preBuildTasks, taskName, watchFiles, ext;
       if (item.shim != null) {
         for (key in ref$ = params.shim) {
           shimItem = ref$[key];
@@ -476,10 +480,6 @@
             }
           }
         }
-      }
-      if (params.type === 'liveify') {
-        liveify = require('liveify');
-        params.jshintExclude.push(path.join(srcDir, '**/*.ls'));
       }
       if (item.jshintRelativeExclude) {
         for (i$ = 0, len$ = (ref$ = item.jshintRelativeExclude).length; i$ < len$; ++i$) {
@@ -514,10 +514,7 @@
           scriptsCleanTask(name, params, cb);
         };
       }.call(this, name, params)));
-      if ((function(it){
-        return it === 'browserify' || it === 'liveify';
-      })(
-      item.type)) {
+      if (item.type === 'browserify') {
         gulp.task(buildTaskName, preBuildTasks, (function(name, params){
           return function(cb){
             scriptsBuildBrowserifyTask(name, params, cb);
@@ -535,10 +532,13 @@
         watchFiles = item.watchFiles;
         break;
       case item.type !== 'browserify':
-        watchFiles = path.join(srcDir, '**/*.js');
-        break;
-      case item.type !== 'liveify':
-        watchFiles = [path.join(srcDir, '**/*.ls'), path.join(srcDir, '**/*.js')];
+        watchFiles = [path.join(srcDir, '**/*.js')];
+        if (params.extensions) {
+          for (i$ = 0, len$ = (ref$ = params.extensions).length; i$ < len$; ++i$) {
+            ext = ref$[i$];
+            watchFiles.push(path.join(srcDir, '**/*' + ext));
+          }
+        }
         break;
       default:
         throw Error('unimplemented');

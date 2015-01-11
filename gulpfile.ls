@@ -38,7 +38,7 @@ supported-types =
 		\less
 	scripts:
 		\browserify
-		\liveify
+		...
 
 watch-tasks = []
 default-tasks = []
@@ -442,9 +442,8 @@ scripts-build-browserify-task = (name, params, cb) !->
 	else if not production and params.debug is not false
 		options.debug = true
 
-	if params.type is \liveify
-		options.transform = [ \liveify ]
-		options.extensions = [ \.ls ]
+	options.transform = params.transform if params.transform?
+	options.extensions = params.extensions if params.extensions?
 
 	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
 
@@ -469,6 +468,8 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 		jshint-disabled: item.jshintDisabled and true or false
 		jshint-params: item.jshintParams or null
 		jshint-exclude: item.jshintExclude or []
+		transform: item.transform or null
+		extensions: item.extensions or null
 
 	params.type |> check-for-supported-type \scripts
 
@@ -481,10 +482,6 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 				if param-name is \relativePath
 					shim-item.path = path.join src-dir, val
 					delete! shim-item[param-name]
-
-	if params.type is \liveify
-		require! liveify
-		params.jshint-exclude.push path.join src-dir, '**/*.ls'
 
 	if item.jshintRelativeExclude
 		for exclude in item.jshintRelativeExclude
@@ -516,7 +513,7 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 		let name, params
 			(cb) !-> scripts-clean-task name, params, cb
 
-	if item.type |> (in <[ browserify liveify ]>)
+	if item.type is \browserify
 		gulp.task build-task-name, pre-build-tasks,
 			let name, params
 				(cb) !-> scripts-build-browserify-task name, params, cb
@@ -530,11 +527,13 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 
 	switch
 	| item.watchFiles?         => watch-files = item.watchFiles
-	| item.type is \browserify => watch-files = path.join src-dir, '**/*.js'
-	| item.type is \liveify    =>
+	| item.type is \browserify =>
 		watch-files =
-			path.join src-dir, '**/*.ls'
 			path.join src-dir, '**/*.js'
+			...
+		if params.extensions
+			for ext in params.extensions
+				watch-files.push path.join src-dir, '**/*' + ext
 	| _ => ...
 
 	init-watcher-task(
