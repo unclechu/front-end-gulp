@@ -75,7 +75,22 @@ Usage
     }
     ```
 
-This doc in working process...
+3. Structure of definition of all tasks in <i>"gulp"</i> key (except <i>"distclean"</i>):
+
+  ```json
+  ...
+  "task-type": {
+    "own-group-name1": {
+      // params
+    },
+    "own-group-name2": {
+      // params
+    }
+  }
+  ...
+  ```
+
+To be continued...
 
 Supported tasks types
 ---------------------
