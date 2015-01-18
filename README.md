@@ -85,7 +85,7 @@ Supported tasks types
   1. [Stylus](https://learnboost.github.io/stylus/);
   2. [Less](http://lesscss.org/).
 3. Scripts:
-  1. [Browserify](http://browserify.org/) (transforms supported, you can use LiveScript, CoffeeScript, etc.)
+  1. [Browserify](http://browserify.org/) (transforms supported, you can use [LiveScript](http://livescript.net), [CoffeeScript](http://coffeescript.org/), etc.)
 
 License
 =======
