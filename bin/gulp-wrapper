@@ -5,4 +5,4 @@ var path = require('path');
 process.argv.push('--gulpfile=' + path.join(path.dirname(module.filename), '..', 'gulpfile.js'));
 process.argv.push('--cwd=' + path.join(path.dirname(module.filename), '..', '..', '..'));
 
-require('gulp-cli')();
+require('gulp/bin/gulp');

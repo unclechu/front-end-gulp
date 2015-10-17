@@ -1,6 +1,6 @@
 {
   "name": "front-end-gulp-pattern",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "gulp-cli wrapper with own read-only gulpfile for front-end.",
   "keywords": [
     "gulp",
@@ -33,8 +33,7 @@
   },
   "dependencies": {
     "yargs": "^1",
-    "gulp": "^3",
-    "gulp-cli": "~0.1.3",
+    "gulp": "^3.9",
     "del": "^1",
     "gulp-task-listing": "^1",
     "gulp-callback": "~0.0.3",
