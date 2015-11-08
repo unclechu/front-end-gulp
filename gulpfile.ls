@@ -1,6 +1,6 @@
 /**
  * @author Viacheslav Lotsmanov
- * @license GNU/GPLv3 (https://raw.githubusercontent.com/unclechu/front-end-gulp-pattern/master/LICENSE)
+ * @license MIT (https://raw.githubusercontent.com/unclechu/front-end-gulp-pattern/master/LICENSE-MIT)
  * @see {@link https://github.com/unclechu/front-end-gulp-pattern|GitHub}
  */
 

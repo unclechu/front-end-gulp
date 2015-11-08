@@ -1,7 +1,7 @@
 {
   "name": "front-end-gulp-pattern",
   "version": "1.0.2",
-  "description": "gulp-cli wrapper with own read-only gulpfile for front-end.",
+  "description": "Declarative front-end tasks over Gulp",
   "keywords": [
     "gulp",
     "stylus",
@@ -16,6 +16,9 @@
     "sprite",
     "css"
   ],
+  "scripts": {
+    "build-gulpfile": "node_modules/.bin/lsc -c gulpfile.ls"
+  },
   "bin": {
     "front-end-gulp": "./bin/gulp-wrapper"
   },
@@ -23,8 +26,8 @@
   "bugs": "https://github.com/unclechu/front-end-gulp-pattern/issues",
   "licenses": [
     {
-      "type": "GNU/GPLv3",
-      "url": "https://raw.githubusercontent.com/unclechu/front-end-gulp-pattern/master/LICENSE"
+      "type": "MIT",
+      "url": "https://raw.githubusercontent.com/unclechu/front-end-gulp-pattern/master/LICENSE-MIT"
     }
   ],
   "repository": {
@@ -53,7 +56,7 @@
     "jshint-stylish": "^1"
   },
   "engines": {
-    "node": ">= 0.10"
+    "node": ">= 4.0.0"
   },
   "directories": {
     "bin": "./bin/"
