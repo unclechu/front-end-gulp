@@ -5,7 +5,7 @@
  * @see {@link https://github.com/unclechu/front-end-gulp-pattern|GitHub}
  */
 (function(){
-  var path, fs, yargs, gulp, del, tasks, gcb, plumber, gulpif, rename, sourcemaps, argv, pkg, isProductionMode, ignoreErrors, supportedTypes, watchTasks, defaultTasks, cleanTasks, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, typicalCleanTask, spritesCleanTasks, spritesBuildTasks, spritesWatchTasks, spritesData, spritePreparePaths, spriteCleanTask, spriteBuildTask, spriteGetNameByMask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsInitTasks, cleanData, distCleanData, distCleanTasks;
+  var path, fs, yargs, gulp, del, tasks, gcb, plumber, gulpif, rename, sourcemaps, argv, pkg, isProductionMode, ignoreErrors, supportedTypes, watchTasks, defaultTasks, cleanTasks, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, typicalCleanTask, spritesCleanTasks, spritesBuildTasks, spritesWatchTasks, spritesData, ref$, spritePreparePaths, spriteCleanTask, spriteBuildTask, spriteGetNameByMask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsInitTasks, cleanData, distCleanData, distCleanTasks;
   path = require('path');
   fs = require('fs');
   yargs = require('yargs');
@@ -42,29 +42,22 @@
     }
   };
   initTaskIteration = function(name, item, initFunc){
-    var subTaskName, ref$, subTask, subTaskParams, key, val;
+    var subTaskName, ref$, subTask, subTaskParams;
     initFunc(name, item);
-    if (item.subTasks) {
-      for (subTaskName in ref$ = item.subTasks) {
-        subTask = ref$[subTaskName];
-        subTaskParams = clone$(item);
-        subTaskParams.subTask = null;
-        for (key in subTask) {
-          val = subTask[key];
-          subTaskParams[key] = val;
-        }
-        initFunc(name + '-' + subTaskName, subTaskParams, true);
-      }
+    if (item.subTasks == null) {
+      return;
+    }
+    for (subTaskName in ref$ = item.subTasks) {
+      subTask = ref$[subTaskName];
+      subTaskParams = importAll$(importAll$(clone$(item), {
+        subTask: null
+      }), subTask);
+      initFunc(name + "-" + subTaskName, subTaskParams, true);
     }
   };
   initWatcherTask = function(subTask, watchFiles, addToWatchersList, watchTaskName, watchersList, buildTaskName){
     var addToList;
-    addToList = false;
-    if (addToWatchersList === true) {
-      addToList = true;
-    } else if (!subTask && addToWatchersList !== false) {
-      addToList = true;
-    }
+    addToList = addToWatchersList === true || (!subTask && addToWatchersList !== false);
     gulp.task(watchTaskName, function(){
       ignoreErrors = true;
       gulp.watch(watchFiles, [buildTaskName]);
@@ -74,18 +67,15 @@
     }
   };
   preparePaths = function(params, cb){
-    var destDir, srcDir, srcFilePath, exists;
-    destDir = path.join(params.path, 'build');
-    if (params.destDir != null) {
-      destDir = params.destDir;
-    }
-    srcDir = path.join(params.path, 'src');
-    if (params.srcDir != null) {
-      srcDir = params.srcDir;
-    }
+    var destDir, ref$, srcDir, srcFilePath;
+    destDir = (ref$ = params.destDir) != null
+      ? ref$
+      : path.join(params.path, 'build');
+    srcDir = (ref$ = params.srcDir) != null
+      ? ref$
+      : path.join(params.path, 'src');
     srcFilePath = path.join(srcDir, params.mainSrc);
-    exists = fs.existsSync(srcFilePath);
-    if (!exists) {
+    if (!fs.existsSync(srcFilePath)) {
       throw new Error("Source file '" + srcFilePath + "' is not exists");
     }
     cb(srcFilePath, srcDir, destDir);
@@ -104,11 +94,7 @@
   typicalCleanTask = function(name, params, cb){
     preparePaths(params, function(srcFilePath, srcDir, destDir){
       var toRemove;
-      if (params.destDir != null) {
-        toRemove = path.join(destDir, params.buildFile);
-      } else {
-        toRemove = destDir;
-      }
+      toRemove = params.destDir != null ? path.join(destDir, params.buildFile) : destDir;
       del(toRemove, {
         force: true
       }, cb);
@@ -117,11 +103,13 @@
   spritesCleanTasks = [];
   spritesBuildTasks = [];
   spritesWatchTasks = [];
-  spritesData = pkg.gulp.sprites || {};
+  spritesData = (ref$ = pkg.gulp.sprites) != null
+    ? ref$
+    : {};
   spritePreparePaths = function(params, cb){
     var img, data;
-    img = {};
-    data = {};
+    img = Object.create(null);
+    data = Object.create(null);
     if (params.path == null) {
       if (params.imgSrcDir == null || params.imgDestDir == null || params.dataDestDir == null) {
         throw new Error('Not enough parameters');
@@ -151,52 +139,41 @@
   spriteCleanTask = function(name, spriteParams, params, cb){
     spritePreparePaths(params, function(img, data){
       var toRemove;
-      toRemove = [data.buildFilePath];
-      if (params.imgDestDir != null) {
-        toRemove.push(img.buildFilePath);
-      } else {
-        toRemove.push(img.destDir);
-      }
+      toRemove = [data.buildFilePath].concat([params.imgDestDir != null && img.buildFilePath || img.destDir]);
       del(toRemove, {
         force: true
       }, cb);
     });
   };
   spriteBuildTask = function(name, spriteParams, params, cb){
-    spritePreparePaths(params, function(img, data){
+    spritePreparePaths(params, function(img, css){
       var spriteData, ready, postCb;
       spriteData = gulp.src(path.join(img.srcDir, '*.png')).pipe(gulpif(ignoreErrors, plumber({
         errorHandler: cb
       }))).pipe(require('gulp.spritesmith')(spriteParams));
       ready = {
         img: false,
-        data: false
+        css: false
       };
       postCb = function(){
-        if (!ready.img || !ready.data) {
-          return;
+        if (ready.img && ready.css) {
+          cb();
         }
-        cb();
       };
       spriteData.img.pipe(gulp.dest(img.destDir)).pipe(gcb(function(){
         ready.img = true;
         postCb();
       }));
-      spriteData.css.pipe(gulp.dest(data.destDir)).pipe(gcb(function(){
-        ready.data = true;
+      spriteData.css.pipe(gulp.dest(css.destDir)).pipe(gcb(function(){
+        ready.css = true;
         postCb();
       }));
     });
   };
   spriteGetNameByMask = function(name, s, mask){
-    var reg, result, item;
-    reg = new RegExp("\\#task-name\\#", 'g');
-    result = '' + mask.replace(reg, name);
-    for (item in s) {
-      reg = new RegExp("\\#" + item + "\\#", 'g');
-      result = result.replace(reg, s[item]);
-    }
-    return result;
+    return Object.keys(s).reduce(function(result, key){
+      return result.replace(new RegExp("\\#" + key + "\\#", 'g'), s[key]);
+    }, mask.replace(new RegExp('\\#task-name\\#', 'g'), name));
   };
   spriteInitTasks = function(name, item, subTask){
     var params;
@@ -211,8 +188,8 @@
       imgPublicPath: item.imgPublicPath || null,
       dataItemNameMask: item.dataItemNameMask || 'sprite-#task-name#-#name#'
     };
-    spritePreparePaths(params, function(img, data){
-      var spriteParams, cleanTaskName, buildTaskName, watchTaskName, preBuildTasks, i$, ref$, len$, taskName, watchFiles;
+    spritePreparePaths(params, function(img){
+      var spriteParams, cleanTaskName, buildTaskName, watchTaskName, preBuildTasks, ref$, watchFiles;
       spriteParams = {
         imgName: params.imgBuildFile,
         cssName: params.dataBuildFile,
@@ -229,16 +206,12 @@
           };
         }.call(this, name))
       };
-      cleanTaskName = 'clean-sprite-' + name;
-      buildTaskName = 'sprite-' + name;
-      watchTaskName = buildTaskName + '-watch';
-      preBuildTasks = [cleanTaskName];
-      if (item.buildDeps != null) {
-        for (i$ = 0, len$ = (ref$ = item.buildDeps).length; i$ < len$; ++i$) {
-          taskName = ref$[i$];
-          preBuildTasks.push(taskName);
-        }
-      }
+      cleanTaskName = "clean-sprite-" + name;
+      buildTaskName = "sprite-" + name;
+      watchTaskName = buildTaskName + "-watch";
+      preBuildTasks = [cleanTaskName].concat((ref$ = item.buildDeps) != null
+        ? ref$
+        : []);
       gulp.task(cleanTaskName, (function(name, spriteParams, params){
         return function(cb){
           spriteCleanTask(name, spriteParams, params, cb);
@@ -253,11 +226,9 @@
       if (!subTask) {
         spritesBuildTasks.push(buildTaskName);
       }
-      if (item.watchFiles != null) {
-        watchFiles = item.watchFiles;
-      } else {
-        watchFiles = path.join(img.srcDir, '*.png');
-      }
+      watchFiles = (ref$ = item.watchFiles) != null
+        ? ref$
+        : path.join(img.srcDir, '*.png');
       initWatcherTask(subTask, watchFiles, item.addToWatchersList, watchTaskName, spritesWatchTasks, buildTaskName);
     });
   };
@@ -280,7 +251,9 @@
   stylesCleanTasks = [];
   stylesBuildTasks = [];
   stylesWatchTasks = [];
-  stylesData = pkg.gulp.styles || {};
+  stylesData = (ref$ = pkg.gulp.styles) != null
+    ? ref$
+    : {};
   stylesCleanTask = typicalCleanTask;
   stylesBuildTask = function(name, params, cb){
     preparePaths(params, function(srcFilePath, srcDir, destDir){
@@ -404,7 +377,9 @@
   scriptsCleanTasks = [];
   scriptsBuildTasks = [];
   scriptsWatchTasks = [];
-  scriptsData = pkg.gulp.scripts || {};
+  scriptsData = (ref$ = pkg.gulp.scripts) != null
+    ? ref$
+    : {};
   scriptsCleanTask = typicalCleanTask;
   scriptsJshintTask = function(name, params, cb){
     preparePaths(params, function(srcFilePath, srcDir){
@@ -490,10 +465,10 @@
       if (typeof item.debug === 'boolean') {
         params.debug = item.debug;
       }
-      cleanTaskName = 'clean-scripts-' + name;
-      buildTaskName = 'scripts-' + name;
-      jshintTaskName = buildTaskName + '-jshint';
-      watchTaskName = buildTaskName + '-watch';
+      cleanTaskName = "clean-scripts-" + name;
+      buildTaskName = "scripts-" + name;
+      jshintTaskName = buildTaskName + "-jshint";
+      watchTaskName = buildTaskName + "-watch";
       preBuildTasks = [cleanTaskName];
       if (item.buildDeps != null) {
         for (i$ = 0, len$ = (ref$ = item.buildDeps).length; i$ < len$; ++i$) {
@@ -562,8 +537,12 @@
     gulp.task('scripts-watch', scriptsWatchTasks);
     watchTasks.push('scripts-watch');
   }
-  cleanData = pkg.gulp.clean || [];
-  distCleanData = pkg.gulp.distclean || [];
+  cleanData = (ref$ = pkg.gulp.clean) != null
+    ? ref$
+    : [];
+  distCleanData = (ref$ = pkg.gulp.distclean) != null
+    ? ref$
+    : [];
   distCleanTasks = [];
   if (cleanData.length > 0 || cleanTasks.length > 0) {
     gulp.task('clean', cleanTasks, function(cb){
@@ -581,6 +560,10 @@
   }
   if (defaultTasks.length > 0) {
     gulp.task('default', defaultTasks);
+  }
+  function importAll$(obj, src){
+    for (var key in src) obj[key] = src[key];
+    return obj;
   }
   function clone$(it){
     function fun(){} fun.prototype = it;

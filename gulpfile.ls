@@ -13,11 +13,11 @@ require! {
 	gulp
 	del
 	\gulp-task-listing : tasks
-	\gulp-callback : gcb
-	\gulp-plumber : plumber
-	\gulp-if : gulpif
-	\gulp-rename : rename
-	\gulp-sourcemaps : sourcemaps
+	\gulp-callback     : gcb
+	\gulp-plumber      : plumber
+	\gulp-if           : gulpif
+	\gulp-rename       : rename
+	\gulp-sourcemaps   : sourcemaps
 }
 
 const argv = do
@@ -49,27 +49,26 @@ const supported-types =
 		\browserify
 		...
 
-watch-tasks = []
+watch-tasks   = []
 default-tasks = []
-clean-tasks = []
+clean-tasks   = []
 
 # helpers {{{1
 
-rename-build-file = (build-path, main-src, build-file) !->
+const rename-build-file = (build-path, main-src, build-file) !->
 	if build-path.basename is path.basename main-src, path.extname main-src
-		build-path.extname = path.extname build-file
+		build-path.extname  = path.extname build-file
 		build-path.basename = path.basename build-file, build-path.extname
 
 # sync
-init-task-iteration = (name, item, init-func) !->
+const init-task-iteration = (name, item, init-func) !->
 	init-func name, item
-	if item.sub-tasks then for sub-task-name, sub-task of item.sub-tasks
-		sub-task-params = ^^item
-		sub-task-params.sub-task = null
-		for key, val of sub-task then sub-task-params[key] = val
-		init-func name + \- + sub-task-name, sub-task-params, true
+	return unless item.sub-tasks?
+	for sub-task-name, sub-task of item.sub-tasks
+		const sub-task-params = ^^item <<<< { sub-task: null } <<<< sub-task
+		init-func "#{name}-#{sub-task-name}", sub-task-params, true
 
-init-watcher-task = (
+const init-watcher-task = (
 	sub-task
 	watch-files
 	add-to-watchers-list
@@ -77,46 +76,42 @@ init-watcher-task = (
 	watchers-list
 	build-task-name
 ) !->
-	add-to-list = false
-	if add-to-watchers-list is true
-		add-to-list = true
-	else if not sub-task and add-to-watchers-list is not false
-		add-to-list = true
+	const add-to-list =
+		(add-to-watchers-list is true)
+		or (not sub-task and add-to-watchers-list isnt false)
 	
-	gulp.task watch-task-name , !->
+	gulp.task watch-task-name, !->
 		ignore-errors := true
-		gulp.watch watch-files , [ build-task-name ]
+		gulp.watch watch-files, [ build-task-name ]
 	
-	if add-to-list then watchers-list.push watch-task-name
+	watchers-list.push watch-task-name if add-to-list
 
 # sync
-prepare-paths = (params, cb) !->
-	dest-dir = path.join params.path, \build
-	dest-dir = params.dest-dir if params.dest-dir?
+const prepare-paths = (params, cb) !->
+	const dest-dir = params.dest-dir ? path.join params.path, \build
+	const src-dir  = params.src-dir  ? path.join params.path, \src
 	
-	src-dir = path.join params.path, \src
-	src-dir = params.src-dir if params.src-dir?
+	const src-file-path = path.join src-dir, params.main-src
 	
-	src-file-path = path.join src-dir, params.main-src
-	
-	exists = fs.exists-sync src-file-path
-	throw new Error "Source file '#src-file-path' is not exists" if not exists
+	unless fs.exists-sync src-file-path
+		throw new Error "Source file '#src-file-path' is not exists"
 	
 	cb src-file-path, src-dir, dest-dir
 
-check-for-supported-type = (category, type) !-->
+const check-for-supported-type = (category, type) !-->
 	unless supported-types[category]?
 		throw new Error "Unknown category: '#category'"
 	unless type |> (in supported-types[category])
 		throw new Error "Unknown #category type: '#type'"
 
-typical-clean-task = (name, params, cb) !->
+const typical-clean-task = (name, params, cb) !->
 	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
 	
-	if params.dest-dir?
-		to-remove = path.join dest-dir, params.build-file
-	else
-		to-remove = dest-dir
+	const to-remove =
+		if params.dest-dir?
+			path.join dest-dir, params.build-file
+		else
+			dest-dir
 	
 	del to-remove, force: true, cb
 
@@ -128,26 +123,28 @@ sprites-clean-tasks = []
 sprites-build-tasks = []
 sprites-watch-tasks = []
 
-const sprites-data = pkg.gulp.sprites or {}
+const sprites-data = pkg.gulp.sprites ? {}
 
 # helper
-sprite-prepare-paths = (params, cb) !->
-	img = {}
-	data = {}
+const sprite-prepare-paths = (params, cb) !->
+	img  = Object.create null
+	data = Object.create null
 	
 	unless params.path?
-		if not params.img-src-dir? or not params.img-dest-dir? or not params.data-dest-dir?
+		if (not params.img-src-dir?)
+		or (not params.img-dest-dir?)
+		or (not params.data-dest-dir?)
 			throw new Error 'Not enough parameters'
 	else
-		img.src-dir = path.join params.path, \src
-		img.dest-dir = path.join params.path, \build
+		img.src-dir   = path.join params.path, \src
+		img.dest-dir  = path.join params.path, \build
 		data.dest-dir = path.join params.path, \build
 	
-	img.src-dir = params.img-src-dir if params.img-src-dir?
-	img.dest-dir = params.img-dest-dir if params.img-dest-dir?
+	img.src-dir   = params.img-src-dir   if params.img-src-dir?
+	img.dest-dir  = params.img-dest-dir  if params.img-dest-dir?
 	data.dest-dir = params.data-dest-dir if params.data-dest-dir?
 	
-	img.build-file-path = path.join img.dest-dir, params.img-build-file
+	img.build-file-path  = path.join img.dest-dir,  params.img-build-file
 	data.build-file-path = path.join data.dest-dir, params.data-build-file
 	
 	img.public-path = img.build-file-path
@@ -155,90 +152,75 @@ sprite-prepare-paths = (params, cb) !->
 	
 	cb img, data
 
-sprite-clean-task = (name, sprite-params, params, cb) !->
+const sprite-clean-task = (name, sprite-params, params, cb) !->
 	(img, data) <-! sprite-prepare-paths params
 	
-	to-remove =
-		data.build-file-path
-		...
-	
-	if params.img-dest-dir?
-		to-remove.push img.build-file-path
-	else
-		to-remove.push img.dest-dir
+	const to-remove =
+		[ data.build-file-path ] ++
+			[ params.img-dest-dir? and img.build-file-path or img.dest-dir ]
 	
 	del to-remove, force: true, cb
 
-sprite-build-task = (name, sprite-params, params, cb) !->
-	(img, data) <-! sprite-prepare-paths params
+const sprite-build-task = (name, sprite-params, params, cb) !->
+	(img, css) <-! sprite-prepare-paths params
 	
-	sprite-data = gulp.src path.join img.src-dir, '*.png'
-		.pipe gulpif ignore-errors, plumber errorHandler: cb
-		.pipe (require \gulp.spritesmith) sprite-params
+	const sprite-data =
+		gulp.src path.join img.src-dir, \*.png
+			.pipe gulpif ignore-errors, plumber error-handler: cb
+			.pipe (require \gulp.spritesmith) sprite-params
 	
 	ready =
 		img: no
-		data: no
+		css: no
 	
-	postCb = !->
-		return if not ready.img or not ready.data
-		cb!
+	const post-cb = !-> do cb if ready.img and ready.css
 	
 	sprite-data.img
 		.pipe gulp.dest img.dest-dir
 		.pipe gcb !->
 			ready.img = yes
-			postCb!
+			post-cb!
 	
 	sprite-data.css
-		.pipe gulp.dest data.dest-dir
+		.pipe gulp.dest css.dest-dir
 		.pipe gcb !->
-			ready.data = yes
-			postCb!
+			ready.css = yes
+			post-cb!
 
-sprite-get-name-by-mask = (name, s, mask)->
-	reg = new RegExp "\\\#task-name\\\#", \g
-	result = '' + mask .replace reg, name
-	for item of s
-		reg = new RegExp "\\\##item\\\#", \g
-		result .= replace reg, s[item]
-	result
+const sprite-get-name-by-mask = (name, s, mask) ->
+	Object.keys s .reduce (result, key) ->
+		result.replace (new RegExp "\\##{key}\\#", \g), s[key]
+	, mask.replace (new RegExp '\\#task-name\\#', \g), name
 
-sprite-init-tasks = (name, item, sub-task=false) !->
-	params =
-		path: item.path or null
-		img-build-file: item.imgBuildFile or \build.png
-		img-src-dir: item.imgSrcDir or null
-		img-dest-dir: item.imgDestDir or null
-		data-build-file: item.dataBuildFile or \build.json
-		data-dest-dir: item.dataDestDir or null
-		img-public-path: item.imgPublicPath or null
-		data-item-name-mask: item.dataItemNameMask or 'sprite-#task-name#-#name#'
+const sprite-init-tasks = (name, item, sub-task=false) !->
+	const params =
+		path                : item.path                or null
+		img-build-file      : item.img-build-file      or \build.png
+		img-src-dir         : item.img-src-dir         or null
+		img-dest-dir        : item.img-dest-dir        or null
+		data-build-file     : item.data-build-file     or \build.json
+		data-dest-dir       : item.data-dest-dir       or null
+		img-public-path     : item.img-public-path     or null
+		data-item-name-mask : item.data-item-name-mask or \sprite-#task-name#-#name#
 	
-	(img, data) <-! sprite-prepare-paths params
+	(img) <-! sprite-prepare-paths params
 	
-	sprite-params =
-		img-name: params.img-build-file
-		css-name: params.data-build-file
-		img-path: img.public-path
-		padding: item.padding or 1
-		algorithm: item.algorithm or \top-down
-		img-opts: format: \png
-		css-format: item.dataType or void # default detects by extension
-		css-var-map: let name then (s) !->
+	const sprite-params =
+		img-name    : params.img-build-file
+		css-name    : params.data-build-file
+		img-path    : img.public-path
+		padding     : item.padding or 1
+		algorithm   : item.algorithm or \top-down
+		img-opts    : format: \png
+		css-format  : item.data-type or void # default detects by extension
+		css-var-map : let name then (s) !->
 			s.name = sprite-get-name-by-mask name, s, params.data-item-name-mask
 	
-	clean-task-name = \clean-sprite- + name
-	build-task-name = \sprite- + name
-	watch-task-name = build-task-name + \-watch
+	const clean-task-name = "clean-sprite-#name"
+	const build-task-name = "sprite-#name"
+	const watch-task-name = "#{build-task-name}-watch"
 	
-	pre-build-tasks =
-		clean-task-name
-		...
-	
-	if item.buildDeps?
-		for task-name in item.buildDeps
-			pre-build-tasks.push task-name
+	const pre-build-tasks = [ clean-task-name ] ++ (item.build-deps ? [])
 	
 	gulp.task clean-task-name,
 		let name, sprite-params, params
@@ -253,15 +235,12 @@ sprite-init-tasks = (name, item, sub-task=false) !->
 	
 	# watcher
 	
-	if item.watchFiles?
-		watch-files = item.watchFiles
-	else
-		watch-files = path.join img.src-dir, '*.png'
+	const watch-files = item.watch-files ? path.join img.src-dir, \*.png
 	
 	init-watcher-task(
 		sub-task
 		watch-files
-		item.addToWatchersList
+		item.add-to-watchers-list
 		watch-task-name
 		sprites-watch-tasks
 		build-task-name
@@ -288,7 +267,7 @@ styles-clean-tasks = []
 styles-build-tasks = []
 styles-watch-tasks = []
 
-const styles-data = pkg.gulp.styles or {}
+const styles-data = pkg.gulp.styles ? {}
 
 styles-clean-task = typical-clean-task
 
@@ -413,7 +392,7 @@ scripts-clean-tasks = []
 scripts-build-tasks = []
 scripts-watch-tasks = []
 
-const scripts-data = pkg.gulp.scripts or {}
+const scripts-data = pkg.gulp.scripts ? {}
 
 scripts-clean-task = typical-clean-task
 
@@ -496,10 +475,10 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 	if typeof item.debug is \boolean
 		params.debug = item.debug
 	
-	clean-task-name = \clean-scripts- + name
-	build-task-name = \scripts- + name
-	jshint-task-name = build-task-name + \-jshint
-	watch-task-name = build-task-name + \-watch
+	const clean-task-name  = "clean-scripts-#name"
+	const build-task-name  = "scripts-#name"
+	const jshint-task-name = "#{build-task-name}-jshint"
+	const watch-task-name  = "#{build-task-name}-watch"
 	
 	pre-build-tasks =
 		clean-task-name
@@ -568,19 +547,19 @@ if scripts-watch-tasks.length > 0
 
 # clean {{{1
 
-const clean-data = pkg.gulp.clean or []
-const dist-clean-data = pkg.gulp.distclean or []
+const clean-data = pkg.gulp.clean ? []
+const dist-clean-data = pkg.gulp.distclean ? []
 
 dist-clean-tasks = []
 
-if clean-data.length > 0 or clean-tasks.length > 0
-	gulp.task \clean, clean-tasks, (cb) !-> del clean-data , cb
+if (clean-data.length > 0) or (clean-tasks.length > 0)
+	gulp.task \clean, clean-tasks, (cb) !-> del clean-data, cb
 	dist-clean-tasks.push \clean
 
-if dist-clean-tasks.length > 0 or dist-clean-data.length > 0
-	gulp.task \distclean , dist-clean-tasks, (cb) !-> del dist-clean-data , cb
+if (dist-clean-tasks.length > 0) or (dist-clean-data.length > 0)
+	gulp.task \distclean, dist-clean-tasks, (cb) !-> del dist-clean-data, cb
 
 # clean }}}1
 
 gulp.task \watch, watch-tasks if watch-tasks.length > 0
-gulp.task \default default-tasks if default-tasks.length > 0
+gulp.task \default, default-tasks if default-tasks.length > 0

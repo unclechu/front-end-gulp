@@ -1,20 +1,28 @@
 Changelog
 =========
 
-1.0.1 / 2015-01-11
+2.0.0 / 8 Nov 2015
 ------------------
+
+1. License changed from `GPLv3` to `MIT`;
+2. Some code refactoring;
+3. LiveScript 1.4;
+4. Updated some modules versions.
+
+1.0.1 / 11 Jan 2015
+-------------------
 
 1. Fixes for `gulp-stylus` that broke backward compatibility, sourcemaps
    now provides by `gulp-sourcemaps` (as plugin).
 
-1.0.0 / 2015-01-11
-------------------
+1.0.0 / 11 Jan 2015
+-------------------
 
 1. Browserify transforms now provided by `package.json`, no longer need to
    modify `front-end-gulp-pattern` for support new transform
    (see for "transform" and "extensions" keys in `package.json`).
 
-0.0.1 / 2015-01-09
+0.0.1 / 9 Jan 2015
 ------------------
 
 1. Fixed bugs with custom sources paths for scripts tasks;
@@ -31,19 +39,19 @@ Changelog
 11. Empty tasks removing;
 12. NPM package.
 
-r11 / 2015-01-08
+r11 / 8 Jan 2015
 ----------------
 
 1. More abstractions in code instead of copy-paste blocks;
 2. Fixed sources paths for watchers (custom sources paths support).
 
-r10 / 2015-01-08
+r10 / 8 Jan 2015
 ----------------
 
 1. Added "shim" option support for "stylus" styles tasks as array of paths to
    modules that return plugin callback (like "nib").
 
-r9 / 2015-01-06
+r9 / 6 Jan 2015
 ---------------
 
 1. Exceptions for not existing main source files for scripts and styles tasks;
