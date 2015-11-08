@@ -7,9 +7,9 @@
 require! {
 	path
 	fs
-
-	yargs : {argv}
-
+	
+	yargs
+	
 	gulp
 	del
 	\gulp-task-listing : tasks
@@ -20,19 +20,28 @@ require! {
 	\gulp-sourcemaps : sourcemaps
 }
 
-pkg = require path.join process.cwd!, './package.json'
+const argv = do
+	yargs
+		.default do
+			production: false
+			ignore-errors: false
+		.boolean \production
+		.boolean \ignore-errors
+		.argv
+
+const pkg = require path.join process.cwd!, \package.json
 
 unless pkg.gulp?
 	throw new Error 'No "gulp" key in package.json'
 
 gulp.task \help, tasks
 
-production = argv.production?
+const is-production-mode = argv.production
 
 # ignore errors, will be enabled anyway by any watcher
-ignore-errors = argv[\ignore-errors]?
+ignore-errors = argv.ignore-errors
 
-supported-types =
+const supported-types =
 	styles:
 		\stylus
 		\less
@@ -73,26 +82,26 @@ init-watcher-task = (
 		add-to-list = true
 	else if not sub-task and add-to-watchers-list is not false
 		add-to-list = true
-
+	
 	gulp.task watch-task-name , !->
 		ignore-errors := true
 		gulp.watch watch-files , [ build-task-name ]
-
+	
 	if add-to-list then watchers-list.push watch-task-name
 
 # sync
 prepare-paths = (params, cb) !->
 	dest-dir = path.join params.path, \build
 	dest-dir = params.dest-dir if params.dest-dir?
-
+	
 	src-dir = path.join params.path, \src
 	src-dir = params.src-dir if params.src-dir?
-
+	
 	src-file-path = path.join src-dir, params.main-src
-
+	
 	exists = fs.exists-sync src-file-path
 	throw new Error "Source file '#src-file-path' is not exists" if not exists
-
+	
 	cb src-file-path, src-dir, dest-dir
 
 check-for-supported-type = (category, type) !-->
@@ -103,12 +112,12 @@ check-for-supported-type = (category, type) !-->
 
 typical-clean-task = (name, params, cb) !->
 	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
-
+	
 	if params.dest-dir?
 		to-remove = path.join dest-dir, params.build-file
 	else
 		to-remove = dest-dir
-
+	
 	del to-remove, force: true, cb
 
 # helpers }}}1
@@ -119,13 +128,13 @@ sprites-clean-tasks = []
 sprites-build-tasks = []
 sprites-watch-tasks = []
 
-sprites-data = pkg.gulp.sprites or {}
+const sprites-data = pkg.gulp.sprites or {}
 
 # helper
 sprite-prepare-paths = (params, cb) !->
 	img = {}
 	data = {}
-
+	
 	unless params.path?
 		if not params.img-src-dir? or not params.img-dest-dir? or not params.data-dest-dir?
 			throw new Error 'Not enough parameters'
@@ -133,54 +142,54 @@ sprite-prepare-paths = (params, cb) !->
 		img.src-dir = path.join params.path, \src
 		img.dest-dir = path.join params.path, \build
 		data.dest-dir = path.join params.path, \build
-
+	
 	img.src-dir = params.img-src-dir if params.img-src-dir?
 	img.dest-dir = params.img-dest-dir if params.img-dest-dir?
 	data.dest-dir = params.data-dest-dir if params.data-dest-dir?
-
+	
 	img.build-file-path = path.join img.dest-dir, params.img-build-file
 	data.build-file-path = path.join data.dest-dir, params.data-build-file
-
+	
 	img.public-path = img.build-file-path
 	img.public-path = params.img-public-path if params.img-public-path?
-
+	
 	cb img, data
 
 sprite-clean-task = (name, sprite-params, params, cb) !->
 	(img, data) <-! sprite-prepare-paths params
-
+	
 	to-remove =
 		data.build-file-path
 		...
-
+	
 	if params.img-dest-dir?
 		to-remove.push img.build-file-path
 	else
 		to-remove.push img.dest-dir
-
+	
 	del to-remove, force: true, cb
 
 sprite-build-task = (name, sprite-params, params, cb) !->
 	(img, data) <-! sprite-prepare-paths params
-
+	
 	sprite-data = gulp.src path.join img.src-dir, '*.png'
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
 		.pipe (require \gulp.spritesmith) sprite-params
-
+	
 	ready =
 		img: no
 		data: no
-
+	
 	postCb = !->
 		return if not ready.img or not ready.data
 		cb!
-
+	
 	sprite-data.img
 		.pipe gulp.dest img.dest-dir
 		.pipe gcb !->
 			ready.img = yes
 			postCb!
-
+	
 	sprite-data.css
 		.pipe gulp.dest data.dest-dir
 		.pipe gcb !->
@@ -205,9 +214,9 @@ sprite-init-tasks = (name, item, sub-task=false) !->
 		data-dest-dir: item.dataDestDir or null
 		img-public-path: item.imgPublicPath or null
 		data-item-name-mask: item.dataItemNameMask or 'sprite-#task-name#-#name#'
-
+	
 	(img, data) <-! sprite-prepare-paths params
-
+	
 	sprite-params =
 		img-name: params.img-build-file
 		css-name: params.data-build-file
@@ -218,37 +227,37 @@ sprite-init-tasks = (name, item, sub-task=false) !->
 		css-format: item.dataType or void # default detects by extension
 		css-var-map: let name then (s) !->
 			s.name = sprite-get-name-by-mask name, s, params.data-item-name-mask
-
+	
 	clean-task-name = \clean-sprite- + name
 	build-task-name = \sprite- + name
 	watch-task-name = build-task-name + \-watch
-
+	
 	pre-build-tasks =
 		clean-task-name
 		...
-
+	
 	if item.buildDeps?
 		for task-name in item.buildDeps
 			pre-build-tasks.push task-name
-
+	
 	gulp.task clean-task-name,
 		let name, sprite-params, params
 			(cb) !-> sprite-clean-task name, sprite-params, params, cb
-
+	
 	gulp.task build-task-name, pre-build-tasks,
 		let name, sprite-params, params
 			(cb) !-> sprite-build-task name, sprite-params, params, cb
-
+	
 	sprites-clean-tasks.push clean-task-name
 	sprites-build-tasks.push build-task-name unless sub-task
-
+	
 	# watcher
-
+	
 	if item.watchFiles?
 		watch-files = item.watchFiles
 	else
 		watch-files = path.join img.src-dir, '*.png'
-
+	
 	init-watcher-task(
 		sub-task
 		watch-files
@@ -279,25 +288,25 @@ styles-clean-tasks = []
 styles-build-tasks = []
 styles-watch-tasks = []
 
-styles-data = pkg.gulp.styles or {}
+const styles-data = pkg.gulp.styles or {}
 
 styles-clean-task = typical-clean-task
 
 styles-build-task = (name, params, cb) !->
 	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
-
-	options = compress: production
-
+	
+	options = compress: is-production-mode
+	
 	source-maps = false
 	if params.source-maps is true
 		source-maps = true
-	else if not production and params.source-maps is not false
+	else if not is-production-mode and params.source-maps is not false
 		source-maps = true
-
+	
 	source-maps-as-plugin = false
-
+	
 	plugin = null
-
+	
 	switch
 	| params.type is \stylus =>
 		# stylus-shim
@@ -305,14 +314,14 @@ styles-build-task = (name, params, cb) !->
 			options.use = []
 			for module-path in params.shim
 				options.use.push require path.join process.cwd!, module-path
-
+		
 		source-maps-as-plugin = true if source-maps
 		plugin = require \gulp-stylus
 	| params.type is \less =>
 		source-maps-as-plugin = true if source-maps
 		plugin = require \gulp-less
 	| _ => ...
-
+	
 	gulp.src src-file-path
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
 		.pipe gulpif source-maps-as-plugin, sourcemaps.init!
@@ -332,39 +341,39 @@ styles-init-tasks = (name, item, sub-task=false) !->
 		build-file: item.buildFile
 		dest-dir: item.destDir or null
 		shim: item.shim or null
-
+	
 	params.type |> check-for-supported-type \styles
-
+	
 	if typeof item.sourceMaps is \boolean
 		params.source-maps = item.sourceMaps
-
+	
 	clean-task-name = \clean-styles- + name
 	build-task-name = \styles- + name
 	watch-task-name = build-task-name + \-watch
-
+	
 	pre-build-tasks =
 		clean-task-name
 		...
-
+	
 	if item.buildDeps?
 		for task-name in item.buildDeps
 			pre-build-tasks.push task-name
-
+	
 	gulp.task clean-task-name,
 		let name, params
 			(cb) !-> styles-clean-task name, params, cb
-
+	
 	gulp.task build-task-name, pre-build-tasks,
 		let name, params
 			(cb) !-> styles-build-task name, params, cb
-
+	
 	styles-clean-tasks.push clean-task-name
 	styles-build-tasks.push build-task-name unless sub-task
-
+	
 	# watcher
-
+	
 	(src-file-path, src-dir) <-! prepare-paths params
-
+	
 	switch
 	| item.watchFiles?     => watch-files = item.watchFiles
 	| item.type is \less   => watch-files = path.join src-dir, '**/*.less'
@@ -373,7 +382,7 @@ styles-init-tasks = (name, item, sub-task=false) !->
 			path.join src-dir, '**/*.styl'
 			path.join src-dir, '**/*.stylus'
 	| _ => ...
-
+	
 	init-watcher-task(
 		sub-task
 		watch-files
@@ -404,25 +413,25 @@ scripts-clean-tasks = []
 scripts-build-tasks = []
 scripts-watch-tasks = []
 
-scripts-data = pkg.gulp.scripts or {}
+const scripts-data = pkg.gulp.scripts or {}
 
 scripts-clean-task = typical-clean-task
 
 scripts-jshint-task = (name, params, cb) !->
 	(src-file-path, src-dir) <-! prepare-paths params
-
+	
 	require! {
 		\gulp-jshint : jshint
 		\jshint-stylish : stylish
 	}
-
+	
 	src =
 		path.join src-dir, '**/*.js'
 		...
-
+	
 	for exclude in params.jshint-exclude
 		src.push \! + exclude
-
+	
 	gulp.src src
 		.pipe jshint params.jshint-params
 		.pipe jshint.reporter stylish
@@ -433,21 +442,21 @@ scripts-build-browserify-task = (name, params, cb) !->
 	options =
 		shim: params.shim
 		debug: false
-
+	
 	if params.debug is true
 		options.debug = true
-	else if not production and params.debug is not false
+	else if not is-production-mode and params.debug is not false
 		options.debug = true
-
+	
 	options.transform = params.transform if params.transform?
 	options.extensions = params.extensions if params.extensions?
-
+	
 	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
-
+	
 	gulp.src src-file-path, read: false
 		.pipe gulpif ignore-errors, plumber errorHandler: cb
 		.pipe (require \gulp-browserify) options
-		.pipe gulpif production, (require \gulp-uglify) preserveComments: \some
+		.pipe gulpif is-production-mode, (require \gulp-uglify) preserveComments: \some
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest dest-dir
@@ -467,11 +476,11 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 		jshint-exclude: item.jshintExclude or []
 		transform: item.transform or null
 		extensions: item.extensions or null
-
+	
 	params.type |> check-for-supported-type \scripts
-
+	
 	(src-file-path, src-dir) <-! prepare-paths params
-
+	
 	# parse relative paths in "shim"
 	if item.shim?
 		for key, shim-item of params.shim
@@ -479,49 +488,49 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 				if param-name is \relativePath
 					shim-item.path = path.join src-dir, val
 					delete! shim-item[param-name]
-
+	
 	if item.jshintRelativeExclude
 		for exclude in item.jshintRelativeExclude
 			params.jshint-exclude.push path.join src-dir, exclude
-
+	
 	if typeof item.debug is \boolean
 		params.debug = item.debug
-
+	
 	clean-task-name = \clean-scripts- + name
 	build-task-name = \scripts- + name
 	jshint-task-name = build-task-name + \-jshint
 	watch-task-name = build-task-name + \-watch
-
+	
 	pre-build-tasks =
 		clean-task-name
 		...
-
+	
 	if item.buildDeps?
 		for task-name in item.buildDeps
 			pre-build-tasks.push task-name
-
+	
 	unless params.jshint-disabled
 		gulp.task jshint-task-name,
 			let name, params
 				(cb) !-> scripts-jshint-task name, params, cb
 		pre-build-tasks.push jshint-task-name
-
+	
 	gulp.task clean-task-name,
 		let name, params
 			(cb) !-> scripts-clean-task name, params, cb
-
+	
 	if item.type is \browserify
 		gulp.task build-task-name, pre-build-tasks,
 			let name, params
 				(cb) !-> scripts-build-browserify-task name, params, cb
 	else
 		...
-
+	
 	scripts-clean-tasks.push clean-task-name
 	scripts-build-tasks.push build-task-name unless sub-task
-
+	
 	# watcher
-
+	
 	switch
 	| item.watchFiles?         => watch-files = item.watchFiles
 	| item.type is \browserify =>
@@ -532,7 +541,7 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 			for ext in params.extensions
 				watch-files.push path.join src-dir, '**/*' + ext
 	| _ => ...
-
+	
 	init-watcher-task(
 		sub-task
 		watch-files
@@ -559,8 +568,9 @@ if scripts-watch-tasks.length > 0
 
 # clean {{{1
 
-clean-data = pkg.gulp.clean or []
-dist-clean-data = pkg.gulp.distclean or []
+const clean-data = pkg.gulp.clean or []
+const dist-clean-data = pkg.gulp.distclean or []
+
 dist-clean-tasks = []
 
 if clean-data.length > 0 or clean-tasks.length > 0
