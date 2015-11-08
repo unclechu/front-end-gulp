@@ -146,17 +146,17 @@
     });
   };
   spriteBuildTask = function(name, spriteParams, params, cb){
-    spritePreparePaths(params, function(img, css){
+    spritePreparePaths(params, function(img, data){
       var spriteData, ready, postCb;
       spriteData = gulp.src(path.join(img.srcDir, '*.png')).pipe(gulpif(ignoreErrors, plumber({
         errorHandler: cb
       }))).pipe(require('gulp.spritesmith')(spriteParams));
       ready = {
         img: false,
-        css: false
+        data: false
       };
       postCb = function(){
-        if (ready.img && ready.css) {
+        if (ready.img && ready.data) {
           cb();
         }
       };
@@ -164,8 +164,8 @@
         ready.img = true;
         postCb();
       }));
-      spriteData.css.pipe(gulp.dest(css.destDir)).pipe(gcb(function(){
-        ready.css = true;
+      spriteData.data.pipe(gulp.dest(data.destDir)).pipe(gcb(function(){
+        ready.data = true;
         postCb();
       }));
     });
@@ -257,52 +257,45 @@
   stylesCleanTask = typicalCleanTask;
   stylesBuildTask = function(name, params, cb){
     preparePaths(params, function(srcFilePath, srcDir, destDir){
-      var options, sourceMaps, sourceMapsAsPlugin, plugin, i$, ref$, len$, modulePath;
-      options = {
-        compress: isProductionMode
-      };
-      sourceMaps = false;
-      if (params.sourceMaps === true) {
-        sourceMaps = true;
-      } else if (!isProductionMode && params.sourceMaps !== false) {
-        sourceMaps = true;
-      }
-      sourceMapsAsPlugin = false;
-      plugin = null;
-      switch (false) {
-      case params.type !== 'stylus':
-        if (params.shim != null) {
-          options.use = [];
-          for (i$ = 0, len$ = (ref$ = params.shim).length; i$ < len$; ++i$) {
-            modulePath = ref$[i$];
-            options.use.push(require(path.join(process.cwd(), modulePath)));
-          }
+      var options, ref$, sourceMaps, plugin;
+      options = import$((ref$ = Object.create(null), ref$.compress = isProductionMode, ref$), params.type === 'stylus' && params.shim != null
+        ? {
+          use: (function(){
+            var i$, x$, ref$, len$, results$ = [];
+            for (i$ = 0, len$ = (ref$ = params.shim).length; i$ < len$; ++i$) {
+              x$ = ref$[i$];
+              results$.push(require(path.join(process.cwd(), x$)));
+            }
+            return results$;
+          }())
         }
-        if (sourceMaps) {
-          sourceMapsAsPlugin = true;
+        : params.type === 'less' && params.shim != null
+          ? (function(){
+            throw Error('unimplemented');
+          }())
+          : {});
+      sourceMaps = params.sourceMaps === true || (!isProductionMode && params.sourceMaps !== false);
+      plugin = (function(){
+        switch (params.type) {
+        case 'stylus':
+          return require('gulp-stylus');
+        case 'less':
+          return require('gulp-less');
+        default:
+          throw Error('unimplemented');
         }
-        plugin = require('gulp-stylus');
-        break;
-      case params.type !== 'less':
-        if (sourceMaps) {
-          sourceMapsAsPlugin = true;
-        }
-        plugin = require('gulp-less');
-        break;
-      default:
-        throw Error('unimplemented');
-      }
+      }());
       gulp.src(srcFilePath).pipe(gulpif(ignoreErrors, plumber({
         errorHandler: cb
-      }))).pipe(gulpif(sourceMapsAsPlugin, sourcemaps.init())).pipe(plugin(options)).pipe(gulpif(sourceMapsAsPlugin, sourcemaps.write())).pipe(rename(function(buildPath){
+      }))).pipe(gulpif(sourceMaps, sourcemaps.init())).pipe(plugin(options)).pipe(gulpif(sourceMaps, sourcemaps.write())).pipe(rename(function(buildPath){
         renameBuildFile(buildPath, params.mainSrc, params.buildFile);
       })).pipe(gulp.dest(destDir)).pipe(gcb(cb));
     });
   };
   stylesInitTasks = function(name, item, subTask){
-    var params, cleanTaskName, buildTaskName, watchTaskName, preBuildTasks, i$, ref$, len$, taskName;
+    var params, cleanTaskName, buildTaskName, watchTaskName, preBuildTasks, ref$;
     subTask == null && (subTask = false);
-    params = {
+    params = import$({
       type: item.type,
       path: item.path,
       mainSrc: item.mainSrc,
@@ -310,22 +303,19 @@
       buildFile: item.buildFile,
       destDir: item.destDir || null,
       shim: item.shim || null
-    };
+    }, typeof item.sourceMaps === 'boolean'
+      ? {
+        sourceMaps: item.sourceMaps
+      }
+      : {});
     checkForSupportedType('styles')(
     params.type);
-    if (typeof item.sourceMaps === 'boolean') {
-      params.sourceMaps = item.sourceMaps;
-    }
-    cleanTaskName = 'clean-styles-' + name;
-    buildTaskName = 'styles-' + name;
-    watchTaskName = buildTaskName + '-watch';
-    preBuildTasks = [cleanTaskName];
-    if (item.buildDeps != null) {
-      for (i$ = 0, len$ = (ref$ = item.buildDeps).length; i$ < len$; ++i$) {
-        taskName = ref$[i$];
-        preBuildTasks.push(taskName);
-      }
-    }
+    cleanTaskName = "clean-styles-" + name;
+    buildTaskName = "styles-" + name;
+    watchTaskName = buildTaskName + "-watch";
+    preBuildTasks = [cleanTaskName].concat((ref$ = item.buildDeps) != null
+      ? ref$
+      : []);
     gulp.task(cleanTaskName, (function(name, params){
       return function(cb){
         stylesCleanTask(name, params, cb);
@@ -342,19 +332,20 @@
     }
     preparePaths(params, function(srcFilePath, srcDir){
       var watchFiles;
-      switch (false) {
-      case item.watchFiles == null:
-        watchFiles = item.watchFiles;
-        break;
-      case item.type !== 'less':
-        watchFiles = path.join(srcDir, '**/*.less');
-        break;
-      case item.type !== 'stylus':
-        watchFiles = [path.join(srcDir, '**/*.styl'), path.join(srcDir, '**/*.stylus')];
-        break;
-      default:
-        throw Error('unimplemented');
-      }
+      watchFiles = (function(){
+        switch (false) {
+        case item.watchFiles == null:
+          return item.watchFiles;
+        case item.type !== 'less':
+          return path.join(srcDir, '**/*.less');
+        case item.type !== 'stylus':
+          return ['**/*.styl', '**/*.stylus'].map(function(it){
+            return path.join(srcDir, it);
+          });
+        default:
+          throw Error('unimplemented');
+        }
+      }());
       initWatcherTask(subTask, watchFiles, item.addToWatchersList, watchTaskName, stylesWatchTasks, buildTaskName);
     });
   };
@@ -586,5 +577,10 @@
       } : f;
     };
     return _curry();
+  }
+  function import$(obj, src){
+    var own = {}.hasOwnProperty;
+    for (var key in src) if (own.call(src, key)) obj[key] = src[key];
+    return obj;
   }
 }).call(this);

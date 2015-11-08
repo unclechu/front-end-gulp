@@ -162,7 +162,7 @@ const sprite-clean-task = (name, sprite-params, params, cb) !->
 	del to-remove, force: true, cb
 
 const sprite-build-task = (name, sprite-params, params, cb) !->
-	(img, css) <-! sprite-prepare-paths params
+	(img, data) <-! sprite-prepare-paths params
 	
 	const sprite-data =
 		gulp.src path.join img.src-dir, \*.png
@@ -171,9 +171,9 @@ const sprite-build-task = (name, sprite-params, params, cb) !->
 	
 	ready =
 		img: no
-		css: no
+		data: no
 	
-	const post-cb = !-> do cb if ready.img and ready.css
+	const post-cb = !-> do cb if ready.img and ready.data
 	
 	sprite-data.img
 		.pipe gulp.dest img.dest-dir
@@ -181,10 +181,10 @@ const sprite-build-task = (name, sprite-params, params, cb) !->
 			ready.img = yes
 			post-cb!
 	
-	sprite-data.css
-		.pipe gulp.dest css.dest-dir
+	sprite-data.data
+		.pipe gulp.dest data.dest-dir
 		.pipe gcb !->
-			ready.css = yes
+			ready.data = yes
 			post-cb!
 
 const sprite-get-name-by-mask = (name, s, mask) ->
@@ -269,74 +269,65 @@ styles-watch-tasks = []
 
 const styles-data = pkg.gulp.styles ? {}
 
-styles-clean-task = typical-clean-task
+const styles-clean-task = typical-clean-task
 
-styles-build-task = (name, params, cb) !->
+const styles-build-task = (name, params, cb) !->
 	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
 	
-	options = compress: is-production-mode
+	const options = (Object.create null)
+		<<< { compress: is-production-mode }
+		<<< (
+			if (params.type is \stylus) and params.shim?
+				use: [ (require path.join process.cwd!, ..) for params.shim ]
+			else if (params.type is \less) and params.shim?
+				...
+			else
+				{}
+		)
 	
-	source-maps = false
-	if params.source-maps is true
-		source-maps = true
-	else if not is-production-mode and params.source-maps is not false
-		source-maps = true
+	const source-maps =
+		(params.source-maps is on)
+		or ((not is-production-mode) and (params.source-maps isnt off))
 	
-	source-maps-as-plugin = false
-	
-	plugin = null
-	
-	switch
-	| params.type is \stylus =>
-		# stylus-shim
-		if params.shim?
-			options.use = []
-			for module-path in params.shim
-				options.use.push require path.join process.cwd!, module-path
-		
-		source-maps-as-plugin = true if source-maps
-		plugin = require \gulp-stylus
-	| params.type is \less =>
-		source-maps-as-plugin = true if source-maps
-		plugin = require \gulp-less
-	| _ => ...
+	const plugin = switch params.type
+		| \stylus => require \gulp-stylus
+		| \less   => require \gulp-less
+		| _       => ...
 	
 	gulp.src src-file-path
-		.pipe gulpif ignore-errors, plumber errorHandler: cb
-		.pipe gulpif source-maps-as-plugin, sourcemaps.init!
+		.pipe gulpif ignore-errors, plumber error-handler: cb
+		.pipe gulpif source-maps, sourcemaps.init!
 		.pipe plugin options
-		.pipe gulpif source-maps-as-plugin, sourcemaps.write!
+		.pipe gulpif source-maps, sourcemaps.write!
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest dest-dir
 		.pipe gcb cb
 
-styles-init-tasks = (name, item, sub-task=false) !->
-	params =
-		type: item.type
-		path: item.path
-		main-src: item.mainSrc
-		src-dir: item.srcDir or null
-		build-file: item.buildFile
-		dest-dir: item.destDir or null
-		shim: item.shim or null
+const styles-init-tasks = (name, item, sub-task=false) !->
+	const params =
+		do
+			type       : item.type
+			path       : item.path
+			main-src   : item.main-src
+			src-dir    : item.src-dir or null
+			build-file : item.build-file
+			dest-dir   : item.dest-dir or null
+			shim       : item.shim or null
+		<<< (
+			if typeof item.source-maps is \boolean
+				source-maps: item.source-maps
+			else
+				{}
+		)
 	
 	params.type |> check-for-supported-type \styles
 	
-	if typeof item.sourceMaps is \boolean
-		params.source-maps = item.sourceMaps
+	const clean-task-name = "clean-styles-#name"
+	const build-task-name = "styles-#name"
+	const watch-task-name = "#{build-task-name}-watch"
 	
-	clean-task-name = \clean-styles- + name
-	build-task-name = \styles- + name
-	watch-task-name = build-task-name + \-watch
-	
-	pre-build-tasks =
-		clean-task-name
-		...
-	
-	if item.buildDeps?
-		for task-name in item.buildDeps
-			pre-build-tasks.push task-name
+	const pre-build-tasks = [ clean-task-name ] ++ (item.build-deps ? [])
 	
 	gulp.task clean-task-name,
 		let name, params
@@ -353,19 +344,17 @@ styles-init-tasks = (name, item, sub-task=false) !->
 	
 	(src-file-path, src-dir) <-! prepare-paths params
 	
-	switch
-	| item.watchFiles?     => watch-files = item.watchFiles
-	| item.type is \less   => watch-files = path.join src-dir, '**/*.less'
-	| item.type is \stylus =>
-		watch-files =
-			path.join src-dir, '**/*.styl'
-			path.join src-dir, '**/*.stylus'
-	| _ => ...
+	const watch-files = switch
+		| item.watch-files?    => item.watch-files
+		| item.type is \less   => path.join src-dir, \**/*.less
+		| item.type is \stylus =>
+			<[ **/*.styl **/*.stylus ]> .map (-> path.join src-dir, it)
+		| _ => ...
 	
 	init-watcher-task(
 		sub-task
 		watch-files
-		item.addToWatchersList
+		item.add-to-watchers-list
 		watch-task-name
 		styles-watch-tasks
 		build-task-name
