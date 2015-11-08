@@ -1,9 +1,10 @@
 front-end-gulp-pattern
 ======================
 
-`gulp-cli` wrapper with own read-only `gulpfile` for front-end.
+Declarative front-end tasks over [Gulp](https://github.com/gulpjs/gulp).
 
-Provides own `gulp-cli` binary as `font-end-gulp`.
+Independent Gulp wrapper that provides own
+Gulp CLI tool named as `font-end-gulp`.
 
 Should be configured by `package.json`.
 
@@ -57,7 +58,7 @@ Usage
     ./node_modules/.bin/front-end-gulp --production
     ```
     And `11-front-end-gulp-pattern_symbolic_link.sh` will create symbolic link `front-end-gulp` to `./node_modules/.bin/front-end-gulp` in root of your project. In this case you should add `front-end-gulp` to `.gitignore` and to <i>"distclean"</i>:
-    
+
     ```json
     {
       "dependencies": {
@@ -100,9 +101,11 @@ Supported tasks types
   1. [Stylus](https://learnboost.github.io/stylus/);
   2. [Less](http://lesscss.org/).
 3. Scripts:
-  1. [Browserify](http://browserify.org/) (transforms supported, you can use [LiveScript](http://livescript.net), [CoffeeScript](http://coffeescript.org/), etc.)
+  1. [Browserify](http://browserify.org/) (transforms supported,
+    you can use [LiveScript](http://livescript.net),
+    [CoffeeScript](http://coffeescript.org/), etc.)
 
 License
 =======
 
-[GNU/GPLv3](./LICENSE)
+[MIT](./LICENSE-MIT)
