@@ -2,7 +2,7 @@
 
 var path = require('path');
 
-process.argv.push('--gulpfile=' + path.join(path.dirname(module.filename), '..', 'gulpfile.js'));
-process.argv.push('--cwd=' + path.join(path.dirname(module.filename), '..', '..', '..'));
+process.argv.push('--gulpfile=' + path.join(__dirname, '..', 'gulpfile.js'));
+process.argv.push('--cwd=' + path.join(__dirname, '..', '..', '..'));
 
 require('gulp/bin/gulp');
