@@ -6,6 +6,8 @@ Changelog
 
 1. License changed from `GPLv3` to `MIT`;
 2. Some code refactoring;
+3. In scripts tasks field `jshintDisabled` renamed to `jshintEnabled`;
+4. In scripts tasks JSHint disabled by default;
 3. LiveScript 1.4;
 4. Updated some modules versions.
 

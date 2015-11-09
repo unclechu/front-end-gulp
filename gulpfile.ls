@@ -162,12 +162,16 @@ const sprite-clean-task = (name, sprite-params, params, cb) !->
 	del to-remove, force: true, cb
 
 const sprite-build-task = (name, sprite-params, params, cb) !->
+	require! {
+		\gulp.spritesmith : spritesmith
+	}
+	
 	(img, data) <-! sprite-prepare-paths params
 	
 	const sprite-data =
 		gulp.src path.join img.src-dir, \*.png
 			.pipe gulpif ignore-errors, plumber error-handler: cb
-			.pipe (require \gulp.spritesmith) sprite-params
+			.pipe spritesmith sprite-params
 	
 	ready =
 		img: no
@@ -314,12 +318,7 @@ const styles-init-tasks = (name, item, sub-task=false) !->
 			build-file : item.build-file
 			dest-dir   : item.dest-dir or null
 			shim       : item.shim or null
-		<<< (
-			if typeof item.source-maps is \boolean
-				source-maps: item.source-maps
-			else
-				{}
-		)
+		<<< ((typeof item.source-maps is \boolean) and { item.source-maps } or {})
 	
 	params.type |> check-for-supported-type \styles
 	
@@ -383,22 +382,19 @@ scripts-watch-tasks = []
 
 const scripts-data = pkg.gulp.scripts ? {}
 
-scripts-clean-task = typical-clean-task
+const scripts-clean-task = typical-clean-task
 
-scripts-jshint-task = (name, params, cb) !->
+const scripts-jshint-task = (name, params, cb) !->
 	(src-file-path, src-dir) <-! prepare-paths params
 	
 	require! {
-		\gulp-jshint : jshint
+		\gulp-jshint    : jshint
 		\jshint-stylish : stylish
 	}
 	
-	src =
-		path.join src-dir, '**/*.js'
-		...
-	
-	for exclude in params.jshint-exclude
-		src.push \! + exclude
+	const src =
+		[ path.join src-dir, \**/*.js ] ++
+			[ "!#{..}" for params.jshint-exclude ]
 	
 	gulp.src src
 		.pipe jshint params.jshint-params
@@ -406,92 +402,102 @@ scripts-jshint-task = (name, params, cb) !->
 		.pipe rename \x # hack for end callback
 		.end cb
 
-scripts-build-browserify-task = (name, params, cb) !->
-	options =
-		shim: params.shim
-		debug: false
+const scripts-build-browserify-task = (name, params, cb) !->
+	const options =
+		do
+			shim: params.shim
+			debug:
+				(params.debug is true)
+				or ((not is-production-mode) and (params.debug isnt false))
+		<<< (params.transform? and { params.transform } or {})
+		<<< (params.extensions? and { params.extensions } or {})
 	
-	if params.debug is true
-		options.debug = true
-	else if not is-production-mode and params.debug is not false
-		options.debug = true
-	
-	options.transform = params.transform if params.transform?
-	options.extensions = params.extensions if params.extensions?
+	require! {
+		\gulp-browserify : browserify
+		\gulp-uglify     : uglify
+	}
 	
 	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
 	
 	gulp.src src-file-path, read: false
-		.pipe gulpif ignore-errors, plumber errorHandler: cb
-		.pipe (require \gulp-browserify) options
-		.pipe gulpif is-production-mode, (require \gulp-uglify) preserveComments: \some
+		.pipe gulpif ignore-errors, plumber error-handler: cb
+		.pipe browserify options
+		.pipe gulpif is-production-mode, uglify preserve-comments: \some
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest dest-dir
 		.pipe gcb cb
 
-scripts-init-tasks = (name, item, sub-task=false) !->
-	params =
-		type: item.type
-		path: item.path
-		main-src: item.mainSrc
-		src-dir: item.srcDir or null
-		build-file: item.buildFile
-		dest-dir: item.destDir or null
-		shim: item.shim or {}
-		jshint-disabled: item.jshintDisabled and true or false
-		jshint-params: item.jshintParams or null
-		jshint-exclude: item.jshintExclude or []
-		transform: item.transform or null
-		extensions: item.extensions or null
+# String -> ?Object -> Object
+const scripts-expand-relative-shim-paths = (src-dir, shim ? {}) ->
+	(result, name) <- Object.keys shim .reduce _, {}
+	(<<< result) <| (-> { "#name": it }) <|
+	unless shim[name].relative-path?
+		shim[name]
+	else
+		(shim-item, param) <- Object.keys shim[name] .reduce _, {}
+		const val = shim[name][param]
+		
+		if param is \relativePath
+			shim-item.path = path.join src-dir, val
+		else
+			shim-item[param] = val
+		
+		shim-item
+
+const scripts-init-tasks = (name, item, sub-task=false) !->
+	const src-params =
+		do
+			type            : item.type
+			path            : item.path
+			main-src        : item.main-src
+			src-dir         : item.src-dir or null
+			build-file      : item.build-file
+			dest-dir        : item.dest-dir or null
+			jshint-enabled  : !!item.jshint-enabled
+			jshint-params   : item.jshint-params or null
+			transform       : item.transform or null
+			extensions      : item.extensions or null
+		<<< ((typeof item.debug is \boolean) and { item.debug } or {})
 	
-	params.type |> check-for-supported-type \scripts
+	src-params.type |> check-for-supported-type \scripts
 	
-	(src-file-path, src-dir) <-! prepare-paths params
+	(src-file-path, src-dir) <-! prepare-paths src-params
 	
-	# parse relative paths in "shim"
-	if item.shim?
-		for key, shim-item of params.shim
-			for param-name, val of shim-item
-				if param-name is \relativePath
-					shim-item.path = path.join src-dir, val
-					delete! shim-item[param-name]
-	
-	if item.jshintRelativeExclude
-		for exclude in item.jshintRelativeExclude
-			params.jshint-exclude.push path.join src-dir, exclude
-	
-	if typeof item.debug is \boolean
-		params.debug = item.debug
+	const params =
+		{} <<< src-params
+		<<< { shim: scripts-expand-relative-shim-paths src-dir, item.shim }
+		<<< {
+			jshint-exclude:
+				(item.jshint-exclude or []) ++
+					[ (path.join src-dir, ..) for (item.jshint-relative-exclude or []) ]
+		}
 	
 	const clean-task-name  = "clean-scripts-#name"
 	const build-task-name  = "scripts-#name"
 	const jshint-task-name = "#{build-task-name}-jshint"
 	const watch-task-name  = "#{build-task-name}-watch"
 	
-	pre-build-tasks =
-		clean-task-name
-		...
+	const pre-build-tasks =
+		[ clean-task-name ] ++
+			(item.build-deps ? []) ++
+			(params.jshint-enabled and [jshint-task-name] or [])
 	
-	if item.buildDeps?
-		for task-name in item.buildDeps
-			pre-build-tasks.push task-name
-	
-	unless params.jshint-disabled
+	if params.jshint-enabled
 		gulp.task jshint-task-name,
 			let name, params
 				(cb) !-> scripts-jshint-task name, params, cb
-		pre-build-tasks.push jshint-task-name
 	
 	gulp.task clean-task-name,
 		let name, params
 			(cb) !-> scripts-clean-task name, params, cb
 	
-	if item.type is \browserify
+	switch item.type
+	| \browserify =>
 		gulp.task build-task-name, pre-build-tasks,
 			let name, params
 				(cb) !-> scripts-build-browserify-task name, params, cb
-	else
+	| _ =>
 		...
 	
 	scripts-clean-tasks.push clean-task-name
@@ -499,21 +505,17 @@ scripts-init-tasks = (name, item, sub-task=false) !->
 	
 	# watcher
 	
-	switch
-	| item.watchFiles?         => watch-files = item.watchFiles
-	| item.type is \browserify =>
-		watch-files =
-			path.join src-dir, '**/*.js'
-			...
-		if params.extensions
-			for ext in params.extensions
-				watch-files.push path.join src-dir, '**/*' + ext
-	| _ => ...
+	const watch-files = switch
+		| item.watch-files?        => item.watch-files
+		| item.type is \browserify =>
+			(path.join src-dir, \**/*.js) ++
+				[ (path.join src-dir, "**/*#{..}") for (params.extensions or []) ]
+		| _ => ...
 	
 	init-watcher-task(
 		sub-task
 		watch-files
-		item.addToWatchersList
+		item.add-to-watchers-list
 		watch-task-name
 		scripts-watch-tasks
 		build-task-name

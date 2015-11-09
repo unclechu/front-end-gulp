@@ -5,7 +5,7 @@
  * @see {@link https://github.com/unclechu/front-end-gulp-pattern|GitHub}
  */
 (function(){
-  var path, fs, yargs, gulp, del, tasks, gcb, plumber, gulpif, rename, sourcemaps, argv, pkg, isProductionMode, ignoreErrors, supportedTypes, watchTasks, defaultTasks, cleanTasks, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, typicalCleanTask, spritesCleanTasks, spritesBuildTasks, spritesWatchTasks, spritesData, ref$, spritePreparePaths, spriteCleanTask, spriteBuildTask, spriteGetNameByMask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsInitTasks, cleanData, distCleanData, distCleanTasks;
+  var path, fs, yargs, gulp, del, tasks, gcb, plumber, gulpif, rename, sourcemaps, argv, pkg, isProductionMode, ignoreErrors, supportedTypes, watchTasks, defaultTasks, cleanTasks, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, typicalCleanTask, spritesCleanTasks, spritesBuildTasks, spritesWatchTasks, spritesData, ref$, spritePreparePaths, spriteCleanTask, spriteBuildTask, spriteGetNameByMask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsExpandRelativeShimPaths, scriptsInitTasks, cleanData, distCleanData, distCleanTasks;
   path = require('path');
   fs = require('fs');
   yargs = require('yargs');
@@ -146,11 +146,13 @@
     });
   };
   spriteBuildTask = function(name, spriteParams, params, cb){
+    var spritesmith;
+    spritesmith = require('gulp.spritesmith');
     spritePreparePaths(params, function(img, data){
       var spriteData, ready, postCb;
       spriteData = gulp.src(path.join(img.srcDir, '*.png')).pipe(gulpif(ignoreErrors, plumber({
         errorHandler: cb
-      }))).pipe(require('gulp.spritesmith')(spriteParams));
+      }))).pipe(spritesmith(spriteParams));
       ready = {
         img: false,
         data: false
@@ -303,11 +305,9 @@
       buildFile: item.buildFile,
       destDir: item.destDir || null,
       shim: item.shim || null
-    }, typeof item.sourceMaps === 'boolean'
-      ? {
-        sourceMaps: item.sourceMaps
-      }
-      : {});
+    }, typeof item.sourceMaps === 'boolean' && {
+      sourceMaps: item.sourceMaps
+    } || {});
     checkForSupportedType('styles')(
     params.type);
     cleanTaskName = "clean-styles-" + name;
@@ -374,141 +374,146 @@
   scriptsCleanTask = typicalCleanTask;
   scriptsJshintTask = function(name, params, cb){
     preparePaths(params, function(srcFilePath, srcDir){
-      var jshint, stylish, src, i$, ref$, len$, exclude;
+      var jshint, stylish, src;
       jshint = require('gulp-jshint');
       stylish = require('jshint-stylish');
-      src = [path.join(srcDir, '**/*.js')];
-      for (i$ = 0, len$ = (ref$ = params.jshintExclude).length; i$ < len$; ++i$) {
-        exclude = ref$[i$];
-        src.push('!' + exclude);
-      }
+      src = [path.join(srcDir, '**/*.js')].concat((function(){
+        var i$, x$, ref$, len$, results$ = [];
+        for (i$ = 0, len$ = (ref$ = params.jshintExclude).length; i$ < len$; ++i$) {
+          x$ = ref$[i$];
+          results$.push("!" + x$);
+        }
+        return results$;
+      }()));
       gulp.src(src).pipe(jshint(params.jshintParams)).pipe(jshint.reporter(stylish)).pipe(rename('x')).end(cb);
     });
   };
   scriptsBuildBrowserifyTask = function(name, params, cb){
-    var options;
-    options = {
+    var options, browserify, uglify;
+    options = import$(import$({
       shim: params.shim,
-      debug: false
-    };
-    if (params.debug === true) {
-      options.debug = true;
-    } else if (!isProductionMode && params.debug !== false) {
-      options.debug = true;
-    }
-    if (params.transform != null) {
-      options.transform = params.transform;
-    }
-    if (params.extensions != null) {
-      options.extensions = params.extensions;
-    }
+      debug: params.debug === true || (!isProductionMode && params.debug !== false)
+    }, params.transform != null && {
+      transform: params.transform
+    } || {}), params.extensions != null && {
+      extensions: params.extensions
+    } || {});
+    browserify = require('gulp-browserify');
+    uglify = require('gulp-uglify');
     preparePaths(params, function(srcFilePath, srcDir, destDir){
       gulp.src(srcFilePath, {
         read: false
       }).pipe(gulpif(ignoreErrors, plumber({
         errorHandler: cb
-      }))).pipe(require('gulp-browserify')(options)).pipe(gulpif(isProductionMode, require('gulp-uglify')({
+      }))).pipe(browserify(options)).pipe(gulpif(isProductionMode, uglify({
         preserveComments: 'some'
       }))).pipe(rename(function(buildPath){
         renameBuildFile(buildPath, params.mainSrc, params.buildFile);
       })).pipe(gulp.dest(destDir)).pipe(gcb(cb));
     });
   };
+  scriptsExpandRelativeShimPaths = function(srcDir, shim){
+    shim == null && (shim = {});
+    return Object.keys(shim).reduce(function(result, name){
+      return (function(it){
+        return import$(it, result);
+      })(function(it){
+        var ref$;
+        return ref$ = {}, ref$[name + ""] = it, ref$;
+      }(shim[name].relativePath == null
+        ? shim[name]
+        : Object.keys(shim[name]).reduce(function(shimItem, param){
+          var val;
+          val = shim[name][param];
+          if (param === 'relativePath') {
+            shimItem.path = path.join(srcDir, val);
+          } else {
+            shimItem[param] = val;
+          }
+          return shimItem;
+        }, {})));
+    }, {});
+  };
   scriptsInitTasks = function(name, item, subTask){
-    var params;
+    var srcParams;
     subTask == null && (subTask = false);
-    params = {
+    srcParams = import$({
       type: item.type,
       path: item.path,
       mainSrc: item.mainSrc,
       srcDir: item.srcDir || null,
       buildFile: item.buildFile,
       destDir: item.destDir || null,
-      shim: item.shim || {},
-      jshintDisabled: item.jshintDisabled && true || false,
+      jshintEnabled: !!item.jshintEnabled,
       jshintParams: item.jshintParams || null,
-      jshintExclude: item.jshintExclude || [],
       transform: item.transform || null,
       extensions: item.extensions || null
-    };
+    }, typeof item.debug === 'boolean' && {
+      debug: item.debug
+    } || {});
     checkForSupportedType('scripts')(
-    params.type);
-    preparePaths(params, function(srcFilePath, srcDir){
-      var key, ref$, shimItem, paramName, val, i$, len$, exclude, cleanTaskName, buildTaskName, jshintTaskName, watchTaskName, preBuildTasks, taskName, watchFiles, ext;
-      if (item.shim != null) {
-        for (key in ref$ = params.shim) {
-          shimItem = ref$[key];
-          for (paramName in shimItem) {
-            val = shimItem[paramName];
-            if (paramName === 'relativePath') {
-              shimItem.path = path.join(srcDir, val);
-              delete shimItem[paramName];
-            }
-          }
+    srcParams.type);
+    preparePaths(srcParams, function(srcFilePath, srcDir){
+      var params, ref$, ref1$, cleanTaskName, buildTaskName, jshintTaskName, watchTaskName, preBuildTasks, watchFiles;
+      params = (ref$ = (ref1$ = import$({}, srcParams), ref1$.shim = scriptsExpandRelativeShimPaths(srcDir, item.shim), ref1$), ref$.jshintExclude = (item.jshintExclude || []).concat((function(){
+        var i$, x$, ref$, len$, results$ = [];
+        for (i$ = 0, len$ = (ref$ = item.jshintRelativeExclude || []).length; i$ < len$; ++i$) {
+          x$ = ref$[i$];
+          results$.push(path.join(srcDir, x$));
         }
-      }
-      if (item.jshintRelativeExclude) {
-        for (i$ = 0, len$ = (ref$ = item.jshintRelativeExclude).length; i$ < len$; ++i$) {
-          exclude = ref$[i$];
-          params.jshintExclude.push(path.join(srcDir, exclude));
-        }
-      }
-      if (typeof item.debug === 'boolean') {
-        params.debug = item.debug;
-      }
+        return results$;
+      }())), ref$);
       cleanTaskName = "clean-scripts-" + name;
       buildTaskName = "scripts-" + name;
       jshintTaskName = buildTaskName + "-jshint";
       watchTaskName = buildTaskName + "-watch";
-      preBuildTasks = [cleanTaskName];
-      if (item.buildDeps != null) {
-        for (i$ = 0, len$ = (ref$ = item.buildDeps).length; i$ < len$; ++i$) {
-          taskName = ref$[i$];
-          preBuildTasks.push(taskName);
-        }
-      }
-      if (!params.jshintDisabled) {
+      preBuildTasks = [cleanTaskName].concat((ref$ = item.buildDeps) != null
+        ? ref$
+        : [], params.jshintEnabled && [jshintTaskName] || []);
+      if (params.jshintEnabled) {
         gulp.task(jshintTaskName, (function(name, params){
           return function(cb){
             scriptsJshintTask(name, params, cb);
           };
         }.call(this, name, params)));
-        preBuildTasks.push(jshintTaskName);
       }
       gulp.task(cleanTaskName, (function(name, params){
         return function(cb){
           scriptsCleanTask(name, params, cb);
         };
       }.call(this, name, params)));
-      if (item.type === 'browserify') {
+      switch (item.type) {
+      case 'browserify':
         gulp.task(buildTaskName, preBuildTasks, (function(name, params){
           return function(cb){
             scriptsBuildBrowserifyTask(name, params, cb);
           };
         }.call(this, name, params)));
-      } else {
+        break;
+      default:
         throw Error('unimplemented');
       }
       scriptsCleanTasks.push(cleanTaskName);
       if (!subTask) {
         scriptsBuildTasks.push(buildTaskName);
       }
-      switch (false) {
-      case item.watchFiles == null:
-        watchFiles = item.watchFiles;
-        break;
-      case item.type !== 'browserify':
-        watchFiles = [path.join(srcDir, '**/*.js')];
-        if (params.extensions) {
-          for (i$ = 0, len$ = (ref$ = params.extensions).length; i$ < len$; ++i$) {
-            ext = ref$[i$];
-            watchFiles.push(path.join(srcDir, '**/*' + ext));
-          }
+      watchFiles = (function(){
+        switch (false) {
+        case item.watchFiles == null:
+          return item.watchFiles;
+        case item.type !== 'browserify':
+          return path.join(srcDir, '**/*.js').concat((function(){
+            var i$, x$, ref$, len$, results$ = [];
+            for (i$ = 0, len$ = (ref$ = params.extensions || []).length; i$ < len$; ++i$) {
+              x$ = ref$[i$];
+              results$.push(path.join(srcDir, "**/*" + x$));
+            }
+            return results$;
+          }()));
+        default:
+          throw Error('unimplemented');
         }
-        break;
-      default:
-        throw Error('unimplemented');
-      }
+      }());
       initWatcherTask(subTask, watchFiles, item.addToWatchersList, watchTaskName, scriptsWatchTasks, buildTaskName);
     });
   };
