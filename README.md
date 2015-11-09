@@ -105,6 +105,8 @@ Supported tasks types
   1. [Browserify](http://browserify.org/) (transforms supported,
     you can use [LiveScript](http://livescript.net),
     [CoffeeScript](http://coffeescript.org/), etc.)
+4. HTML:
+  1. [Jade](http://jade-lang.com/).
 
 License
 =======

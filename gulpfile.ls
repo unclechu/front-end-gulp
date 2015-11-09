@@ -12,6 +12,7 @@ require! {
 	
 	gulp
 	del
+	\vinyl-paths
 	\gulp-task-listing : tasks
 	\gulp-callback     : gcb
 	\gulp-plumber      : plumber
@@ -50,6 +51,9 @@ const supported-types =
 		\less
 	scripts:
 		\browserify
+		...
+	html:
+		\jade
 		...
 
 watch-tasks   = []
@@ -94,10 +98,15 @@ const prepare-paths = (params, cb) !->
 	const dest-dir = params.dest-dir ? path.join params.path, \build
 	const src-dir  = params.src-dir  ? path.join params.path, \src
 	
-	const src-file-path = path.join src-dir, params.main-src
+	# ?String
+	const src-file-path =
+		if params.main-src?
+			path.join src-dir, params.main-src
+		else
+			null
 	
-	unless fs.exists-sync src-file-path
-		throw new Error "Source file '#src-file-path' is not exists"
+	if src-file-path? and (not fs.exists-sync src-file-path)
+		throw new Error "Source file '#src-file-path' isn't exists"
 	
 	cb src-file-path, src-dir, dest-dir
 
@@ -114,14 +123,9 @@ const rm-it = (to-remove, cb) ->
 
 const typical-clean-task = (name, params, cb) !->
 	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
-	
-	const to-remove =
-		if params.dest-dir?
-			path.join dest-dir, params.build-file
-		else
-			dest-dir
-	
-	rm-it to-remove, cb
+	rm-it _, cb <| switch
+		| params.dest-dir? => path.join dest-dir, params.build-file
+		| otherwise        => dest-dir
 
 # helpers }}}1
 
@@ -547,6 +551,133 @@ if scripts-watch-tasks.length > 0
 
 # scripts }}}1
 
+# html {{{1
+
+html-clean-tasks = []
+html-build-tasks = []
+html-watch-tasks = []
+
+const html-data = pkg.gulp.html ? {}
+
+const html-get-files-selector = (src-dir ? '', params) -->
+	switch params.type
+	| \jade => [ path.join src-dir, \**/*.jade ]
+	| _     => ...
+
+const html-clean-task = (name, params, cb) !->
+	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
+	
+	if params.dest-dir? and (not src-file-path?)
+		gulp
+			.src (html-get-files-selector null, params), do
+				base: src-dir
+				read: false
+			.pipe rename (build-path) !-> build-path.extname = \.html
+			.pipe gulp.dest dest-dir
+			.pipe vinyl-paths del
+			.on \finish, !-> do cb
+	else
+		rm-it _, cb <| switch
+			| params.dest-dir? => path.join dest-dir, params.build-file
+			| otherwise        => dest-dir
+
+const html-build-task = (name, params, cb) !->
+	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
+	
+	const options = (Object.create null)
+		<<< { pretty: (params.pretty is on) }
+		<<< (params.locals? and { params.locals } or {})
+	
+	const source-maps =
+		(params.source-maps is on)
+		or ((not is-production-mode) and (params.source-maps isnt off))
+	
+	const plugin = switch params.type
+		| \jade => require \gulp-jade
+		| _     => ...
+	
+	const is-single-file = params.main-src? and params.build-file?
+	
+	const src = src-file-path ? html-get-files-selector src-dir, params
+	
+	has-err = false
+	gulp.src src
+		.pipe gulpif ignore-errors, plumber error-handler: !->
+			cb ... unless has-err
+			has-err := true
+		.pipe gulpif source-maps, sourcemaps.init!
+		.pipe plugin options
+		.pipe gulpif source-maps, sourcemaps.write!
+		.pipe gulpif is-single-file, rename (build-path) !->
+			rename-build-file build-path, params.main-src, params.build-file
+		.pipe gulp.dest dest-dir
+		.on \finish, !-> do cb unless has-err
+
+const html-init-tasks = (name, item, sub-task=false) !->
+	const params =
+		do
+			type       : item.type
+			path       : item.path
+			main-src   : item.main-src   or null
+			src-dir    : item.src-dir    or null
+			build-file : item.build-file or null
+			dest-dir   : item.dest-dir   or null
+			pretty     : item.pretty ? null
+			locals     : item.locals ? null
+		<<< ((typeof item.source-maps is \boolean) and { item.source-maps } or {})
+	
+	params.type |> check-for-supported-type \html
+	
+	const clean-task-name = "clean-html-#name"
+	const build-task-name = "html-#name"
+	const watch-task-name = "#{build-task-name}-watch"
+	
+	const pre-build-tasks = [ clean-task-name ] ++ (item.build-deps ? [])
+	
+	gulp.task clean-task-name,
+		let name, params
+			(cb) !-> html-clean-task name, params, cb
+	
+	gulp.task build-task-name, pre-build-tasks,
+		let name, params
+			(cb) !-> html-build-task name, params, cb
+	
+	html-clean-tasks.push clean-task-name
+	html-build-tasks.push build-task-name unless sub-task
+	
+	# watcher
+	
+	(src-file-path, src-dir) <-! prepare-paths params
+	
+	const watch-files = switch
+		| item.watch-files?  => item.watch-files
+		| item.type is \jade => path.join src-dir, \**/*.jade
+		| _ => ...
+	
+	init-watcher-task(
+		sub-task
+		watch-files
+		item.add-to-watchers-list
+		watch-task-name
+		html-watch-tasks
+		build-task-name
+	)
+
+for name, item of html-data
+	init-task-iteration name, item, html-init-tasks
+
+if html-clean-tasks.length > 0
+	gulp.task \clean-html, html-clean-tasks
+	clean-tasks.push \clean-html
+if html-build-tasks.length > 0
+	gulp.task \html, html-build-tasks
+	default-tasks.push \html
+if html-watch-tasks.length > 0
+	gulp.task \html-watch, html-watch-tasks
+	watch-tasks.push \html-watch
+
+# html }}}1
+
 # clean {{{1
 
 const clean-data = pkg.gulp.clean ? []
@@ -565,4 +696,3 @@ if (dist-clean-tasks.length > 0) or (dist-clean-data.length > 0)
 
 gulp.task \watch, watch-tasks if watch-tasks.length > 0
 gulp.task \default, default-tasks
-

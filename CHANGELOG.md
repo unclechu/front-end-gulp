@@ -5,12 +5,13 @@ Changelog
 ------------------
 
 1. License changed from `GPLv3` to `MIT`;
-2. Some code refactoring;
-3. In scripts tasks field `jshintDisabled` renamed to `jshintEnabled`;
-4. In scripts tasks JSHint disabled by default;
-5. Sprites task now must have `type` field with at least `'spritesmith'`;
-6. LiveScript 1.4;
-7. Updated some dependencies versions.
+2. <b>WARNING!</b> In scripts tasks field `jshintDisabled` renamed to `jshintEnabled`;
+3. <b>WARNING!</b> In scripts tasks JSHint disabled by default;
+4. <b>WARNING!</b> Sprites task now must have `type` field with at least `'spritesmith'`;
+5. Support `HTML` building by `Jade` sources;
+6. Some code refactoring;
+7. LiveScript 1.4;
+8. Updated some dependencies versions.
 
 1.0.1 / 11 Jan 2015
 -------------------

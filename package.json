@@ -33,6 +33,7 @@
   },
   "author": "Viacheslav Lotsmanov <lotsmanov89@gmail.com>",
   "bugs": "https://github.com/unclechu/front-end-gulp-pattern/issues",
+  "license": "MIT",
   "licenses": [
     {
       "type": "MIT",
@@ -52,6 +53,7 @@
     "gulp-rename": "^1.2.2",
     "gulp-sourcemaps": "^1.6.0",
     "gulp-task-listing": "^1.0.1",
+    "vinyl-paths": "^2.0.0",
     "yargs": "^3.29.0"
   },
   "devDependencies": {
