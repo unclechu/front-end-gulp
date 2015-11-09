@@ -553,4 +553,4 @@ if (dist-clean-tasks.length > 0) or (dist-clean-data.length > 0)
 # clean }}}1
 
 gulp.task \watch, watch-tasks if watch-tasks.length > 0
-gulp.task \default, default-tasks if default-tasks.length > 0
+gulp.task \default, default-tasks

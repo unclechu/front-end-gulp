@@ -554,9 +554,7 @@
   if (watchTasks.length > 0) {
     gulp.task('watch', watchTasks);
   }
-  if (defaultTasks.length > 0) {
-    gulp.task('default', defaultTasks);
-  }
+  gulp.task('default', defaultTasks);
   function importAll$(obj, src){
     for (var key in src) obj[key] = src[key];
     return obj;
