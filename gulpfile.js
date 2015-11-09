@@ -151,9 +151,14 @@
   };
   spriteCleanTask = function(name, spriteParams, params, cb){
     spritePreparePaths(params, function(img, data){
-      var toRemove;
-      toRemove = [data.buildFilePath].concat([params.imgDestDir != null && img.buildFilePath || img.destDir]);
-      rmIt(toRemove, cb);
+      rmIt((function(){
+        switch (false) {
+        case params.cleanDir == null:
+          return params.cleanDir;
+        default:
+          return [data.buildFilePath].concat([params.imgDestDir != null && img.buildFilePath || img.destDir]);
+        }
+      }()), cb);
     });
   };
   spriteBuildTask = function(name, spriteParams, params, cb){
@@ -189,7 +194,7 @@
     }, mask.replace(new RegExp('\\#task-name\\#', 'g'), name));
   };
   spriteInitTasks = function(name, item, subTask){
-    var params;
+    var params, ref$;
     subTask == null && (subTask = false);
     params = {
       type: item.type,
@@ -200,7 +205,8 @@
       dataBuildFile: item.dataBuildFile || 'build.json',
       dataDestDir: item.dataDestDir || null,
       imgPublicPath: item.imgPublicPath || null,
-      dataItemNameMask: item.dataItemNameMask || 'sprite-#task-name#-#name#'
+      dataItemNameMask: item.dataItemNameMask || 'sprite-#task-name#-#name#',
+      cleanDir: (ref$ = item.cleanDir) != null ? ref$ : null
     };
     checkForSupportedType('sprites')(
     params.type);

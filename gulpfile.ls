@@ -168,11 +168,10 @@ const sprite-prepare-paths = (params, cb) !->
 const sprite-clean-task = (name, sprite-params, params, cb) !->
 	(img, data) <-! sprite-prepare-paths params
 	
-	const to-remove =
-		[ data.build-file-path ] ++
-			[ params.img-dest-dir? and img.build-file-path or img.dest-dir ]
-	
-	rm-it to-remove, cb
+	rm-it _, cb <| switch
+	| params.clean-dir? => params.clean-dir
+	| otherwise => [ data.build-file-path ] ++
+		[ params.img-dest-dir? and img.build-file-path or img.dest-dir ]
 
 const sprite-build-task = (name, sprite-params, params, cb) !->
 	require! {
@@ -220,6 +219,7 @@ const sprite-init-tasks = (name, item, sub-task=false) !->
 		data-dest-dir       : item.data-dest-dir       or null
 		img-public-path     : item.img-public-path     or null
 		data-item-name-mask : item.data-item-name-mask or \sprite-#task-name#-#name#
+		clean-dir           : item.clean-dir ? null
 	
 	params.type |> check-for-supported-type \sprites
 	
