@@ -104,6 +104,11 @@ const check-for-supported-type = (category, type) !-->
 	unless type |> (in supported-types[category])
 		throw new Error "Unknown #category type: '#type'"
 
+const rm-it = (to-remove, cb) ->
+	del to-remove, force: true
+		.then cb.bind null, null
+		.catch cb.bind null
+
 const typical-clean-task = (name, params, cb) !->
 	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
 	
@@ -113,7 +118,7 @@ const typical-clean-task = (name, params, cb) !->
 		else
 			dest-dir
 	
-	del to-remove, force: true, cb
+	rm-it to-remove, cb
 
 # helpers }}}1
 
@@ -159,7 +164,7 @@ const sprite-clean-task = (name, sprite-params, params, cb) !->
 		[ data.build-file-path ] ++
 			[ params.img-dest-dir? and img.build-file-path or img.dest-dir ]
 	
-	del to-remove, force: true, cb
+	rm-it to-remove, cb
 
 const sprite-build-task = (name, sprite-params, params, cb) !->
 	require! {
@@ -544,13 +549,14 @@ const dist-clean-data = pkg.gulp.distclean ? []
 dist-clean-tasks = []
 
 if (clean-data.length > 0) or (clean-tasks.length > 0)
-	gulp.task \clean, clean-tasks, (cb) !-> del clean-data, cb
+	gulp.task \clean, clean-tasks, (cb) !-> rm-it clean-data, cb
 	dist-clean-tasks.push \clean
 
 if (dist-clean-tasks.length > 0) or (dist-clean-data.length > 0)
-	gulp.task \distclean, dist-clean-tasks, (cb) !-> del dist-clean-data, cb
+	gulp.task \distclean, dist-clean-tasks, (cb) !-> rm-it dist-clean-data, cb
 
 # clean }}}1
 
 gulp.task \watch, watch-tasks if watch-tasks.length > 0
 gulp.task \default, default-tasks
+

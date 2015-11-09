@@ -5,7 +5,7 @@
  * @see {@link https://github.com/unclechu/front-end-gulp-pattern|GitHub}
  */
 (function(){
-  var path, fs, yargs, gulp, del, tasks, gcb, plumber, gulpif, rename, sourcemaps, argv, pkg, isProductionMode, ignoreErrors, supportedTypes, watchTasks, defaultTasks, cleanTasks, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, typicalCleanTask, spritesCleanTasks, spritesBuildTasks, spritesWatchTasks, spritesData, ref$, spritePreparePaths, spriteCleanTask, spriteBuildTask, spriteGetNameByMask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsExpandRelativeShimPaths, scriptsInitTasks, cleanData, distCleanData, distCleanTasks;
+  var path, fs, yargs, gulp, del, tasks, gcb, plumber, gulpif, rename, sourcemaps, argv, pkg, isProductionMode, ignoreErrors, supportedTypes, watchTasks, defaultTasks, cleanTasks, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, rmIt, typicalCleanTask, spritesCleanTasks, spritesBuildTasks, spritesWatchTasks, spritesData, ref$, spritePreparePaths, spriteCleanTask, spriteBuildTask, spriteGetNameByMask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsExpandRelativeShimPaths, scriptsInitTasks, cleanData, distCleanData, distCleanTasks;
   path = require('path');
   fs = require('fs');
   yargs = require('yargs');
@@ -91,13 +91,16 @@
       throw new Error("Unknown " + category + " type: '" + type + "'");
     }
   });
+  rmIt = function(toRemove, cb){
+    return del(toRemove, {
+      force: true
+    }).then(cb.bind(null, null))['catch'](cb.bind(null));
+  };
   typicalCleanTask = function(name, params, cb){
     preparePaths(params, function(srcFilePath, srcDir, destDir){
       var toRemove;
       toRemove = params.destDir != null ? path.join(destDir, params.buildFile) : destDir;
-      del(toRemove, {
-        force: true
-      }, cb);
+      rmIt(toRemove, cb);
     });
   };
   spritesCleanTasks = [];
@@ -140,9 +143,7 @@
     spritePreparePaths(params, function(img, data){
       var toRemove;
       toRemove = [data.buildFilePath].concat([params.imgDestDir != null && img.buildFilePath || img.destDir]);
-      del(toRemove, {
-        force: true
-      }, cb);
+      rmIt(toRemove, cb);
     });
   };
   spriteBuildTask = function(name, spriteParams, params, cb){
@@ -542,13 +543,13 @@
   distCleanTasks = [];
   if (cleanData.length > 0 || cleanTasks.length > 0) {
     gulp.task('clean', cleanTasks, function(cb){
-      del(cleanData, cb);
+      rmIt(cleanData, cb);
     });
     distCleanTasks.push('clean');
   }
   if (distCleanTasks.length > 0 || distCleanData.length > 0) {
     gulp.task('distclean', distCleanTasks, function(cb){
-      del(distCleanData, cb);
+      rmIt(distCleanData, cb);
     });
   }
   if (watchTasks.length > 0) {
