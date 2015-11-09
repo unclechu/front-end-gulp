@@ -562,7 +562,11 @@
   });
   htmlCleanTask = function(name, params, cb){
     preparePaths(params, function(srcFilePath, srcDir, destDir){
-      if (params.destDir != null && srcFilePath == null) {
+      switch (false) {
+      case params.cleanDir == null:
+        rmIt([path.join(params.cleanDir)], cb);
+        break;
+      case !(params.destDir != null && srcFilePath == null):
         gulp.src(htmlGetFilesSelector(null, params), {
           base: srcDir,
           read: false
@@ -571,7 +575,8 @@
         })).pipe(gulp.dest(destDir)).pipe(vinylPaths(del)).on('finish', function(){
           cb();
         });
-      } else {
+        break;
+      default:
         rmIt((function(){
           switch (false) {
           case params.destDir == null:
@@ -630,7 +635,8 @@
       buildFile: item.buildFile || null,
       destDir: item.destDir || null,
       pretty: (ref$ = item.pretty) != null ? ref$ : null,
-      locals: (ref$ = item.locals) != null ? ref$ : null
+      locals: (ref$ = item.locals) != null ? ref$ : null,
+      cleanDir: (ref$ = item.cleanDir) != null ? ref$ : null
     }, typeof item.sourceMaps === 'boolean' && {
       sourceMaps: item.sourceMaps
     } || {});

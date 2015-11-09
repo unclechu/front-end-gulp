@@ -424,7 +424,7 @@ const scripts-build-browserify-task = (name, params, cb) !->
 			debug:
 				(params.debug is true)
 				or ((not is-production-mode) and (params.debug isnt false))
-		<<< (params.transform? and { params.transform } or {})
+		<<< (params.transform?  and { params.transform  } or {})
 		<<< (params.extensions? and { params.extensions } or {})
 	
 	require! {
@@ -567,7 +567,9 @@ const html-get-files-selector = (src-dir ? '', params) -->
 const html-clean-task = (name, params, cb) !->
 	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
 	
-	if params.dest-dir? and (not src-file-path?)
+	switch
+	| params.clean-dir? => rm-it [ path.join params.clean-dir ], cb
+	| params.dest-dir? and (not src-file-path?) =>
 		gulp
 			.src (html-get-files-selector null, params), do
 				base: src-dir
@@ -576,7 +578,7 @@ const html-clean-task = (name, params, cb) !->
 			.pipe gulp.dest dest-dir
 			.pipe vinyl-paths del
 			.on \finish, !-> do cb
-	else
+	| otherwise =>
 		rm-it _, cb <| switch
 			| params.dest-dir? => path.join dest-dir, params.build-file
 			| otherwise        => dest-dir
@@ -622,8 +624,9 @@ const html-init-tasks = (name, item, sub-task=false) !->
 			src-dir    : item.src-dir    or null
 			build-file : item.build-file or null
 			dest-dir   : item.dest-dir   or null
-			pretty     : item.pretty ? null
-			locals     : item.locals ? null
+			pretty     : item.pretty    ? null
+			locals     : item.locals    ? null
+			clean-dir  : item.clean-dir ? null
 		<<< ((typeof item.source-maps is \boolean) and { item.source-maps } or {})
 	
 	params.type |> check-for-supported-type \html

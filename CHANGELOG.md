@@ -9,9 +9,11 @@ Changelog
 3. <b>WARNING!</b> In scripts tasks JSHint disabled by default;
 4. <b>WARNING!</b> Sprites task now must have `type` field with at least `'spritesmith'`;
 5. Support `HTML` building by `Jade` sources;
-6. Some code refactoring;
-7. LiveScript 1.4;
-8. Updated some dependencies versions.
+6. New optional param `cleanDir` to replace default clean behavior with just
+   removing target directory;
+7. Some code refactoring;
+8. LiveScript 1.4;
+9. Updated some dependencies versions.
 
 1.0.1 / 11 Jan 2015
 -------------------
