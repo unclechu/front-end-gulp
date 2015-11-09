@@ -97,7 +97,7 @@ Supported tasks types
 ---------------------
 
 1. Sprites:
-  1. ([Spritesmith](https://github.com/Ensighten/spritesmith)).
+  1. [Spritesmith](https://github.com/Ensighten/spritesmith).
 2. Styles:
   1. [Stylus](https://learnboost.github.io/stylus/);
   2. [Less](http://lesscss.org/).
