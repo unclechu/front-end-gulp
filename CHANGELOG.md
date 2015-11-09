@@ -1,15 +1,16 @@
 Changelog
 =========
 
-2.0.0 / 8 Nov 2015
+2.0.0 / 9 Nov 2015
 ------------------
 
 1. License changed from `GPLv3` to `MIT`;
 2. Some code refactoring;
 3. In scripts tasks field `jshintDisabled` renamed to `jshintEnabled`;
 4. In scripts tasks JSHint disabled by default;
-3. LiveScript 1.4;
-4. Updated some modules versions.
+5. Sprites task now must have `type` field with at least `'spritesmith'`;
+6. LiveScript 1.4;
+7. Updated some dependencies versions.
 
 1.0.1 / 11 Jan 2015
 -------------------

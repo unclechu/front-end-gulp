@@ -29,6 +29,7 @@
   isProductionMode = argv.production;
   ignoreErrors = argv.ignoreErrors;
   supportedTypes = {
+    sprites: ['spritesmith'],
     styles: ['stylus', 'less'],
     scripts: ['browserify']
   };
@@ -167,7 +168,7 @@
         ready.img = true;
         postCb();
       }));
-      spriteData.data.pipe(gulp.dest(data.destDir)).pipe(gcb(function(){
+      spriteData.css.pipe(gulp.dest(data.destDir)).pipe(gcb(function(){
         ready.data = true;
         postCb();
       }));
@@ -182,6 +183,7 @@
     var params;
     subTask == null && (subTask = false);
     params = {
+      type: item.type,
       path: item.path || null,
       imgBuildFile: item.imgBuildFile || 'build.png',
       imgSrcDir: item.imgSrcDir || null,
@@ -191,6 +193,8 @@
       imgPublicPath: item.imgPublicPath || null,
       dataItemNameMask: item.dataItemNameMask || 'sprite-#task-name#-#name#'
     };
+    checkForSupportedType('sprites')(
+    params.type);
     spritePreparePaths(params, function(img){
       var spriteParams, cleanTaskName, buildTaskName, watchTaskName, preBuildTasks, ref$, watchFiles;
       spriteParams = {

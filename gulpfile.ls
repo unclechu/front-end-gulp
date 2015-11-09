@@ -42,6 +42,9 @@ const is-production-mode = argv.production
 ignore-errors = argv.ignore-errors
 
 const supported-types =
+	sprites:
+		\spritesmith
+		...
 	styles:
 		\stylus
 		\less
@@ -188,13 +191,13 @@ const sprite-build-task = (name, sprite-params, params, cb) !->
 		.pipe gulp.dest img.dest-dir
 		.pipe gcb !->
 			ready.img = yes
-			post-cb!
+			do post-cb
 	
-	sprite-data.data
+	sprite-data.css
 		.pipe gulp.dest data.dest-dir
 		.pipe gcb !->
 			ready.data = yes
-			post-cb!
+			do post-cb
 
 const sprite-get-name-by-mask = (name, s, mask) ->
 	Object.keys s .reduce (result, key) ->
@@ -203,6 +206,7 @@ const sprite-get-name-by-mask = (name, s, mask) ->
 
 const sprite-init-tasks = (name, item, sub-task=false) !->
 	const params =
+		type                : item.type
 		path                : item.path                or null
 		img-build-file      : item.img-build-file      or \build.png
 		img-src-dir         : item.img-src-dir         or null
@@ -211,6 +215,8 @@ const sprite-init-tasks = (name, item, sub-task=false) !->
 		data-dest-dir       : item.data-dest-dir       or null
 		img-public-path     : item.img-public-path     or null
 		data-item-name-mask : item.data-item-name-mask or \sprite-#task-name#-#name#
+	
+	params.type |> check-for-supported-type \sprites
 	
 	(img) <-! sprite-prepare-paths params
 	
