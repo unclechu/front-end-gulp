@@ -63,7 +63,7 @@
   },
   "files": [
     "bin/gulp-wrapper",
-    "LICENSE",
+    "LICENSE-MIT",
     "README.md",
     "gulpfile.js"
   ]
