@@ -124,8 +124,9 @@ const rm-it = (to-remove, cb) ->
 const typical-clean-task = (name, params, cb) !->
 	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
 	rm-it _, cb <| switch
-		| params.dest-dir? => path.join dest-dir, params.build-file
-		| otherwise        => dest-dir
+		| params.clean-dir? => params.clean-dir
+		| params.dest-dir?  => path.join dest-dir, params.build-file
+		| otherwise         => dest-dir
 
 # helpers }}}1
 
@@ -333,6 +334,7 @@ const styles-init-tasks = (name, item, sub-task=false) !->
 			build-file : item.build-file
 			dest-dir   : item.dest-dir or null
 			shim       : item.shim or null
+			clean-dir  : item.clean-dir ? null
 		<<< ((typeof item.source-maps is \boolean) and { item.source-maps } or {})
 	
 	params.type |> check-for-supported-type \styles
@@ -463,16 +465,17 @@ const scripts-expand-relative-shim-paths = (src-dir, shim ? {}) ->
 const scripts-init-tasks = (name, item, sub-task=false) !->
 	const src-params =
 		do
-			type            : item.type
-			path            : item.path
-			main-src        : item.main-src
-			src-dir         : item.src-dir or null
-			build-file      : item.build-file
-			dest-dir        : item.dest-dir or null
-			jshint-enabled  : !!item.jshint-enabled
-			jshint-params   : item.jshint-params or null
-			transform       : item.transform or null
-			extensions      : item.extensions or null
+			type           : item.type
+			path           : item.path
+			main-src       : item.main-src
+			src-dir        : item.src-dir or null
+			build-file     : item.build-file
+			dest-dir       : item.dest-dir or null
+			jshint-enabled : !!item.jshint-enabled
+			jshint-params  : item.jshint-params or null
+			transform      : item.transform or null
+			extensions     : item.extensions or null
+			clean-dir      : item.clean-dir ? null
 		<<< ((typeof item.debug is \boolean) and { item.debug } or {})
 	
 	src-params.type |> check-for-supported-type \scripts
@@ -568,7 +571,7 @@ const html-clean-task = (name, params, cb) !->
 	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
 	
 	switch
-	| params.clean-dir? => rm-it [ path.join params.clean-dir ], cb
+	| params.clean-dir? => rm-it params.clean-dir, cb
 	| params.dest-dir? and (not src-file-path?) =>
 		gulp
 			.src (html-get-files-selector null, params), do

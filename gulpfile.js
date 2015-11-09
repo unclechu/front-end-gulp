@@ -103,6 +103,8 @@
     preparePaths(params, function(srcFilePath, srcDir, destDir){
       rmIt((function(){
         switch (false) {
+        case params.cleanDir == null:
+          return params.cleanDir;
         case params.destDir == null:
           return path.join(destDir, params.buildFile);
         default:
@@ -307,7 +309,7 @@
     });
   };
   stylesInitTasks = function(name, item, subTask){
-    var params, cleanTaskName, buildTaskName, watchTaskName, preBuildTasks, ref$;
+    var params, ref$, cleanTaskName, buildTaskName, watchTaskName, preBuildTasks;
     subTask == null && (subTask = false);
     params = import$({
       type: item.type,
@@ -316,7 +318,8 @@
       srcDir: item.srcDir || null,
       buildFile: item.buildFile,
       destDir: item.destDir || null,
-      shim: item.shim || null
+      shim: item.shim || null,
+      cleanDir: (ref$ = item.cleanDir) != null ? ref$ : null
     }, typeof item.sourceMaps === 'boolean' && {
       sourceMaps: item.sourceMaps
     } || {});
@@ -447,7 +450,7 @@
     }, {});
   };
   scriptsInitTasks = function(name, item, subTask){
-    var srcParams;
+    var srcParams, ref$;
     subTask == null && (subTask = false);
     srcParams = import$({
       type: item.type,
@@ -459,7 +462,8 @@
       jshintEnabled: !!item.jshintEnabled,
       jshintParams: item.jshintParams || null,
       transform: item.transform || null,
-      extensions: item.extensions || null
+      extensions: item.extensions || null,
+      cleanDir: (ref$ = item.cleanDir) != null ? ref$ : null
     }, typeof item.debug === 'boolean' && {
       debug: item.debug
     } || {});
@@ -564,7 +568,7 @@
     preparePaths(params, function(srcFilePath, srcDir, destDir){
       switch (false) {
       case params.cleanDir == null:
-        rmIt([path.join(params.cleanDir)], cb);
+        rmIt(params.cleanDir, cb);
         break;
       case !(params.destDir != null && srcFilePath == null):
         gulp.src(htmlGetFilesSelector(null, params), {
