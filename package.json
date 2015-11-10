@@ -1,7 +1,7 @@
 {
   "name": "front-end-gulp-pattern",
   "version": "1.0.2",
-  "description": "Declarative front-end tasks over Gulp",
+  "description": "Declarative front-end deploy tasks over Gulp",
   "keywords": [
     "gulp",
     "deploy",

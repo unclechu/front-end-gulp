@@ -1,7 +1,7 @@
 front-end-gulp-pattern
 ======================
 
-Declarative front-end tasks over [Gulp](https://github.com/gulpjs/gulp).
+Declarative front-end deploy tasks over [Gulp](https://github.com/gulpjs/gulp).
 
 Independent Gulp wrapper that provides own
 Gulp CLI tool named as `font-end-gulp`.
