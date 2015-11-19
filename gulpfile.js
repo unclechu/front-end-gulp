@@ -672,14 +672,16 @@
       srcDir: (ref$ = item.srcDir) != null ? ref$ : null,
       buildFile: (ref$ = item.buildFile) != null ? ref$ : null,
       destDir: (ref$ = item.destDir) != null ? ref$ : null,
-      pretty: (ref$ = item.pretty) != null ? ref$ : null,
       locals: (ref$ = item.locals) != null ? ref$ : null,
       cleanTarget: (ref$ = item.cleanTarget) != null ? ref$ : null,
       buildDeps: (ref$ = item.buildDeps) != null
         ? ref$
         : [],
       addToWatchersList: (ref$ = item.addToWatchersList) != null ? ref$ : null,
-      watchFiles: (ref$ = item.watchFiles) != null ? ref$ : null
+      watchFiles: (ref$ = item.watchFiles) != null ? ref$ : null,
+      pretty: (ref$ = item.pretty) != null
+        ? ref$
+        : !isProductionMode
     }, typeof item.sourceMaps === 'boolean' && {
       sourceMaps: item.sourceMaps
     } || {}), isProductionMode && item.production != null

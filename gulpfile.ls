@@ -643,12 +643,12 @@ const html-init-tasks = (name, item, sub-task=false) !->
 		item.src-dir              ? null
 		item.build-file           ? null
 		item.dest-dir             ? null
-		item.pretty               ? null
 		item.locals               ? null
 		item.clean-target         ? null
 		item.build-deps           ? []
 		item.add-to-watchers-list ? null
 		item.watch-files          ? null
+		item.pretty               ? (not is-production-mode)
 	} <<< ((typeof item.source-maps is \boolean) and { item.source-maps } or {})
 	<<< (if is-production-mode and item.production? then item.production else {})
 	
