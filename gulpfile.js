@@ -668,13 +668,18 @@
     params = import$(import$({
       type: item.type,
       path: item.path,
-      mainSrc: item.mainSrc || null,
-      srcDir: item.srcDir || null,
-      buildFile: item.buildFile || null,
-      destDir: item.destDir || null,
+      mainSrc: (ref$ = item.mainSrc) != null ? ref$ : null,
+      srcDir: (ref$ = item.srcDir) != null ? ref$ : null,
+      buildFile: (ref$ = item.buildFile) != null ? ref$ : null,
+      destDir: (ref$ = item.destDir) != null ? ref$ : null,
       pretty: (ref$ = item.pretty) != null ? ref$ : null,
       locals: (ref$ = item.locals) != null ? ref$ : null,
-      cleanTarget: (ref$ = item.cleanTarget) != null ? ref$ : null
+      cleanTarget: (ref$ = item.cleanTarget) != null ? ref$ : null,
+      buildDeps: (ref$ = item.buildDeps) != null
+        ? ref$
+        : [],
+      addToWatchersList: (ref$ = item.addToWatchersList) != null ? ref$ : null,
+      watchFiles: (ref$ = item.watchFiles) != null ? ref$ : null
     }, typeof item.sourceMaps === 'boolean' && {
       sourceMaps: item.sourceMaps
     } || {}), isProductionMode && item.production != null
@@ -685,9 +690,7 @@
     cleanTaskName = "clean-html-" + name;
     buildTaskName = "html-" + name;
     watchTaskName = buildTaskName + "-watch";
-    preBuildTasks = [cleanTaskName].concat((ref$ = item.buildDeps) != null
-      ? ref$
-      : []);
+    preBuildTasks = [cleanTaskName].concat(params.buildDeps);
     gulp.task(cleanTaskName, (function(name, params){
       return function(cb){
         htmlCleanTask(name, params, cb);
@@ -706,15 +709,15 @@
       var watchFiles;
       watchFiles = (function(){
         switch (false) {
-        case item.watchFiles == null:
-          return item.watchFiles;
-        case item.type !== 'jade':
+        case params.watchFiles == null:
+          return params.watchFiles;
+        case params.type !== 'jade':
           return path.join(srcDir, '**/*.jade');
         default:
           throw Error('unimplemented');
         }
       }());
-      initWatcherTask(subTask, watchFiles, item.addToWatchersList, watchTaskName, htmlWatchTasks, buildTaskName);
+      initWatcherTask(subTask, watchFiles, params.addToWatchersList, watchTaskName, htmlWatchTasks, buildTaskName);
     });
   };
   for (name in htmlData) {

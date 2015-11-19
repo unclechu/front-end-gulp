@@ -636,24 +636,21 @@ const html-build-task = (name, params, cb) !->
 		.on \finish, !-> do cb unless has-err
 
 const html-init-tasks = (name, item, sub-task=false) !->
-	const params =
-		do
-			type         : item.type
-			path         : item.path
-			main-src     : item.main-src     or null
-			src-dir      : item.src-dir      or null
-			build-file   : item.build-file   or null
-			dest-dir     : item.dest-dir     or null
-			pretty       : item.pretty        ? null
-			locals       : item.locals        ? null
-			clean-target : item.clean-target  ? null
-		<<< ((typeof item.source-maps is \boolean) and { item.source-maps } or {})
-		<<< (
-			if is-production-mode and item.production?
-				item.production
-			else
-				{}
-		)
+	const params = {
+		item.type
+		item.path
+		item.main-src             ? null
+		item.src-dir              ? null
+		item.build-file           ? null
+		item.dest-dir             ? null
+		item.pretty               ? null
+		item.locals               ? null
+		item.clean-target         ? null
+		item.build-deps           ? []
+		item.add-to-watchers-list ? null
+		item.watch-files          ? null
+	} <<< ((typeof item.source-maps is \boolean) and { item.source-maps } or {})
+	<<< (if is-production-mode and item.production? then item.production else {})
 	
 	params.type |> check-for-supported-type \html
 	
@@ -661,7 +658,7 @@ const html-init-tasks = (name, item, sub-task=false) !->
 	const build-task-name = "html-#name"
 	const watch-task-name = "#{build-task-name}-watch"
 	
-	const pre-build-tasks = [ clean-task-name ] ++ (item.build-deps ? [])
+	const pre-build-tasks = [ clean-task-name ] ++ params.build-deps
 	
 	gulp.task clean-task-name,
 		let name, params
@@ -679,14 +676,14 @@ const html-init-tasks = (name, item, sub-task=false) !->
 	(src-file-path, src-dir) <-! prepare-paths params
 	
 	const watch-files = switch
-		| item.watch-files?  => item.watch-files
-		| item.type is \jade => path.join src-dir, \**/*.jade
+		| params.watch-files?  => params.watch-files
+		| params.type is \jade => path.join src-dir, \**/*.jade
 		| _ => ...
 	
 	init-watcher-task(
 		sub-task
 		watch-files
-		item.add-to-watchers-list
+		params.add-to-watchers-list
 		watch-task-name
 		html-watch-tasks
 		build-task-name
