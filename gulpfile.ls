@@ -124,9 +124,9 @@ const rm-it = (to-remove, cb) ->
 const typical-clean-task = (name, params, cb) !->
 	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
 	rm-it _, cb <| switch
-		| params.clean-dir? => params.clean-dir
-		| params.dest-dir?  => path.join dest-dir, params.build-file
-		| otherwise         => dest-dir
+		| params.clean-target? => params.clean-target
+		| params.dest-dir?     => path.join dest-dir, params.build-file
+		| otherwise            => dest-dir
 
 # helpers }}}1
 
@@ -169,7 +169,7 @@ const sprite-clean-task = (name, sprite-params, params, cb) !->
 	(img, data) <-! sprite-prepare-paths params
 	
 	rm-it _, cb <| switch
-	| params.clean-dir? => params.clean-dir
+	| params.clean-target? => params.clean-target
 	| otherwise => [ data.build-file-path ] ++
 		[ params.img-dest-dir? and img.build-file-path or img.dest-dir ]
 
@@ -209,17 +209,24 @@ const sprite-get-name-by-mask = (name, s, mask) ->
 	, mask.replace (new RegExp '\\#task-name\\#', \g), name
 
 const sprite-init-tasks = (name, item, sub-task=false) !->
-	const params =
-		type                : item.type
-		path                : item.path                or null
-		img-build-file      : item.img-build-file      or \build.png
-		img-src-dir         : item.img-src-dir         or null
-		img-dest-dir        : item.img-dest-dir        or null
-		data-build-file     : item.data-build-file     or \build.json
-		data-dest-dir       : item.data-dest-dir       or null
-		img-public-path     : item.img-public-path     or null
-		data-item-name-mask : item.data-item-name-mask or \sprite-#task-name#-#name#
-		clean-dir           : item.clean-dir ? null
+	const params = {
+		item.type
+		item.path                 ? null
+		item.img-build-file       ? \build.png
+		item.img-src-dir          ? null
+		item.img-dest-dir         ? null
+		item.data-build-file      ? \build.json
+		item.data-dest-dir        ? null
+		item.img-public-path      ? null
+		item.data-item-name-mask  ? \sprite-#task-name#-#name#
+		item.clean-target         ? null
+		item.padding              ? 1
+		item.algorithm            ? \top-down
+		item.data-type            ? void
+		item.build-deps           ? []
+		item.add-to-watchers-list ? null
+		item.watch-files          ? null
+	} <<< (if is-production-mode and item.production? then item.production else {})
 	
 	params.type |> check-for-supported-type \sprites
 	
@@ -229,10 +236,10 @@ const sprite-init-tasks = (name, item, sub-task=false) !->
 		img-name    : params.img-build-file
 		css-name    : params.data-build-file
 		img-path    : img.public-path
-		padding     : item.padding or 1
-		algorithm   : item.algorithm or \top-down
+		padding     : params.padding
+		algorithm   : params.algorithm
 		img-opts    : format: \png
-		css-format  : item.data-type or void # default detects by extension
+		css-format  : params.data-type # detects by extension by default
 		css-var-map : let name then (s) !->
 			s.name = sprite-get-name-by-mask name, s, params.data-item-name-mask
 	
@@ -240,7 +247,7 @@ const sprite-init-tasks = (name, item, sub-task=false) !->
 	const build-task-name = "sprite-#name"
 	const watch-task-name = "#{build-task-name}-watch"
 	
-	const pre-build-tasks = [ clean-task-name ] ++ (item.build-deps ? [])
+	const pre-build-tasks = [ clean-task-name ] ++ params.build-deps
 	
 	gulp.task clean-task-name,
 		let name, sprite-params, params
@@ -255,12 +262,12 @@ const sprite-init-tasks = (name, item, sub-task=false) !->
 	
 	# watcher
 	
-	const watch-files = item.watch-files ? path.join img.src-dir, \*.png
+	const watch-files = params.watch-files ? path.join img.src-dir, \*.png
 	
 	init-watcher-task(
 		sub-task
 		watch-files
-		item.add-to-watchers-list
+		params.add-to-watchers-list
 		watch-task-name
 		sprites-watch-tasks
 		build-task-name
@@ -325,17 +332,20 @@ const styles-build-task = (name, params, cb) !->
 		.pipe gcb cb
 
 const styles-init-tasks = (name, item, sub-task=false) !->
-	const params =
-		do
-			type       : item.type
-			path       : item.path
-			main-src   : item.main-src
-			src-dir    : item.src-dir or null
-			build-file : item.build-file
-			dest-dir   : item.dest-dir or null
-			shim       : item.shim or null
-			clean-dir  : item.clean-dir ? null
-		<<< ((typeof item.source-maps is \boolean) and { item.source-maps } or {})
+	const params = {
+		item.type
+		item.path
+		item.main-src
+		item.src-dir              ? null
+		item.build-file
+		item.dest-dir             ? null
+		item.shim                 ? null
+		item.build-deps           ? []
+		item.clean-target         ? null
+		item.add-to-watchers-list ? null
+		item.watch-files          ? null
+	} <<< ((typeof item.source-maps is \boolean) and { item.source-maps } or {})
+	<<< (if is-production-mode and item.production? then item.production else {})
 	
 	params.type |> check-for-supported-type \styles
 	
@@ -343,7 +353,7 @@ const styles-init-tasks = (name, item, sub-task=false) !->
 	const build-task-name = "styles-#name"
 	const watch-task-name = "#{build-task-name}-watch"
 	
-	const pre-build-tasks = [ clean-task-name ] ++ (item.build-deps ? [])
+	const pre-build-tasks = [ clean-task-name ] ++ params.build-deps
 	
 	gulp.task clean-task-name,
 		let name, params
@@ -361,16 +371,16 @@ const styles-init-tasks = (name, item, sub-task=false) !->
 	(src-file-path, src-dir) <-! prepare-paths params
 	
 	const watch-files = switch
-		| item.watch-files?    => item.watch-files
-		| item.type is \less   => path.join src-dir, \**/*.less
-		| item.type is \stylus =>
+		| params.watch-files?    => params.watch-files
+		| params.type is \less   => path.join src-dir, \**/*.less
+		| params.type is \stylus =>
 			<[ **/*.styl **/*.stylus ]> .map (-> path.join src-dir, it)
 		| _ => ...
 	
 	init-watcher-task(
 		sub-task
 		watch-files
-		item.add-to-watchers-list
+		params.add-to-watchers-list
 		watch-task-name
 		styles-watch-tasks
 		build-task-name
@@ -445,8 +455,8 @@ const scripts-build-browserify-task = (name, params, cb) !->
 		.pipe gulp.dest dest-dir
 		.pipe gcb cb
 
-# String -> ?Object -> Object
-const scripts-expand-relative-shim-paths = (src-dir, shim ? {}) ->
+# String -> Object -> Object
+const scripts-expand-relative-shim-paths = (src-dir, shim) ->
 	(result, name) <- Object.keys shim .reduce _, {}
 	(<<< result) <| (-> { "#name": it }) <|
 	unless shim[name].relative-path?
@@ -463,20 +473,27 @@ const scripts-expand-relative-shim-paths = (src-dir, shim ? {}) ->
 		shim-item
 
 const scripts-init-tasks = (name, item, sub-task=false) !->
-	const src-params =
-		do
-			type           : item.type
-			path           : item.path
-			main-src       : item.main-src
-			src-dir        : item.src-dir or null
-			build-file     : item.build-file
-			dest-dir       : item.dest-dir or null
-			jshint-enabled : !!item.jshint-enabled
-			jshint-params  : item.jshint-params or null
-			transform      : item.transform or null
-			extensions     : item.extensions or null
-			clean-dir      : item.clean-dir ? null
-		<<< ((typeof item.debug is \boolean) and { item.debug } or {})
+	const src-params = {
+		item.type
+		item.path
+		item.main-src
+		item.src-dir              ? null
+		item.build-file
+		item.dest-dir             ? null
+		item.transform            ? null
+		item.extensions           ? null
+		item.build-deps           ? []
+		item.clean-target         ? null
+		item.shim                 ? {}
+		item.watch-files          ? null
+		item.add-to-watchers-list ? null
+		
+		jshint-enabled: !!item.jshint-enabled
+		item.jshint-params           ? null
+		item.jshint-exclude          ? []
+		item.jshint-relative-exclude ? []
+	} <<< ((typeof item.debug is \boolean) and { item.debug } or {})
+	<<< (if is-production-mode and item.production? then item.production else {})
 	
 	src-params.type |> check-for-supported-type \scripts
 	
@@ -484,11 +501,11 @@ const scripts-init-tasks = (name, item, sub-task=false) !->
 	
 	const params =
 		{} <<< src-params
-		<<< { shim: scripts-expand-relative-shim-paths src-dir, item.shim }
+		<<< { shim: scripts-expand-relative-shim-paths src-dir, src-params.shim }
 		<<< {
 			jshint-exclude:
-				(item.jshint-exclude or []) ++
-					[ (path.join src-dir, ..) for (item.jshint-relative-exclude or []) ]
+				src-params.jshint-exclude ++
+					[ (path.join src-dir, ..) for src-params.jshint-relative-exclude ]
 		}
 	
 	const clean-task-name  = "clean-scripts-#name"
@@ -498,7 +515,7 @@ const scripts-init-tasks = (name, item, sub-task=false) !->
 	
 	const pre-build-tasks =
 		[ clean-task-name ] ++
-			(item.build-deps ? []) ++
+			params.build-deps ++
 			(params.jshint-enabled and [jshint-task-name] or [])
 	
 	if params.jshint-enabled
@@ -510,7 +527,7 @@ const scripts-init-tasks = (name, item, sub-task=false) !->
 		let name, params
 			(cb) !-> scripts-clean-task name, params, cb
 	
-	switch item.type
+	switch params.type
 	| \browserify =>
 		gulp.task build-task-name, pre-build-tasks,
 			let name, params
@@ -524,16 +541,16 @@ const scripts-init-tasks = (name, item, sub-task=false) !->
 	# watcher
 	
 	const watch-files = switch
-		| item.watch-files?        => item.watch-files
-		| item.type is \browserify =>
+		| params.watch-files?        => params.watch-files
+		| params.type is \browserify =>
 			(path.join src-dir, \**/*.js) ++
-				[ (path.join src-dir, "**/*#{..}") for (params.extensions or []) ]
+				[ (path.join src-dir, "**/*#{..}") for (params.extensions ? []) ]
 		| _ => ...
 	
 	init-watcher-task(
 		sub-task
 		watch-files
-		item.add-to-watchers-list
+		params.add-to-watchers-list
 		watch-task-name
 		scripts-watch-tasks
 		build-task-name
@@ -571,7 +588,7 @@ const html-clean-task = (name, params, cb) !->
 	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
 	
 	switch
-	| params.clean-dir? => rm-it params.clean-dir, cb
+	| params.clean-target? => rm-it params.clean-target, cb
 	| params.dest-dir? and (not src-file-path?) =>
 		gulp
 			.src (html-get-files-selector null, params), do
@@ -621,16 +638,22 @@ const html-build-task = (name, params, cb) !->
 const html-init-tasks = (name, item, sub-task=false) !->
 	const params =
 		do
-			type       : item.type
-			path       : item.path
-			main-src   : item.main-src   or null
-			src-dir    : item.src-dir    or null
-			build-file : item.build-file or null
-			dest-dir   : item.dest-dir   or null
-			pretty     : item.pretty    ? null
-			locals     : item.locals    ? null
-			clean-dir  : item.clean-dir ? null
+			type         : item.type
+			path         : item.path
+			main-src     : item.main-src     or null
+			src-dir      : item.src-dir      or null
+			build-file   : item.build-file   or null
+			dest-dir     : item.dest-dir     or null
+			pretty       : item.pretty        ? null
+			locals       : item.locals        ? null
+			clean-target : item.clean-target  ? null
 		<<< ((typeof item.source-maps is \boolean) and { item.source-maps } or {})
+		<<< (
+			if is-production-mode and item.production?
+				item.production
+			else
+				{}
+		)
 	
 	params.type |> check-for-supported-type \html
 	
