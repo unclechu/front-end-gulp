@@ -5,14 +5,14 @@
  * @see {@link https://github.com/unclechu/front-end-gulp-pattern|GitHub}
  */
 (function(){
-  var path, fs, yargs, gulp, del, vinylPaths, tasks, gcb, plumber, gulpif, rename, sourcemaps, argv, pkg, isProductionMode, ignoreErrors, supportedTypes, watchTasks, defaultTasks, cleanTasks, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, rmIt, typicalCleanTask, spritesCleanTasks, spritesBuildTasks, spritesWatchTasks, spritesData, ref$, spritePreparePaths, spriteCleanTask, spriteBuildTask, spriteGetNameByMask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsExpandRelativeShimPaths, scriptsInitTasks, htmlCleanTasks, htmlBuildTasks, htmlWatchTasks, htmlData, htmlGetFilesSelector, htmlCleanTask, htmlBuildTask, htmlInitTasks, cleanData, distCleanData, distCleanTasks;
+  var path, fs, yargs, gulp, del, vinylPaths, taskListing, gcb, plumber, gulpif, rename, sourcemaps, argv, tasksFilePath, tasks, isProductionMode, ignoreErrors, supportedTypes, watchTasks, defaultTasks, cleanTasks, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, rmIt, typicalCleanTask, spritesCleanTasks, spritesBuildTasks, spritesWatchTasks, spritesData, ref$, spritePreparePaths, spriteCleanTask, spriteBuildTask, spriteGetNameByMask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsExpandRelativeShimPaths, scriptsInitTasks, htmlCleanTasks, htmlBuildTasks, htmlWatchTasks, htmlData, htmlGetFilesSelector, htmlCleanTask, htmlBuildTask, htmlInitTasks, cleanData, distCleanData, distCleanTasks;
   path = require('path');
   fs = require('fs');
   yargs = require('yargs');
   gulp = require('gulp');
   del = require('del');
   vinylPaths = require('vinyl-paths');
-  tasks = require('gulp-task-listing');
+  taskListing = require('gulp-task-listing');
   gcb = require('gulp-callback');
   plumber = require('gulp-plumber');
   gulpif = require('gulp-if');
@@ -22,11 +22,12 @@
     production: false,
     ignoreErrors: false
   }).boolean('production').boolean('ignore-errors').argv;
-  pkg = require(path.join(process.cwd(), 'package.json'));
-  if (pkg.gulp == null) {
-    throw new Error('No "gulp" key in package.json');
+  tasksFilePath = path.join(process.cwd(), 'front-end-tasks.json');
+  if (!fs.existsSync(tasksFilePath)) {
+    throw new Error('No front-end-tasks.json file');
   }
-  gulp.task('help', tasks);
+  tasks = require(tasksFilePath);
+  gulp.task('help', taskListing);
   isProductionMode = argv.production;
   ignoreErrors = argv.ignoreErrors;
   supportedTypes = {
@@ -116,7 +117,7 @@
   spritesCleanTasks = [];
   spritesBuildTasks = [];
   spritesWatchTasks = [];
-  spritesData = (ref$ = pkg.gulp.sprites) != null
+  spritesData = (ref$ = tasks.sprites) != null
     ? ref$
     : {};
   spritePreparePaths = function(params, cb){
@@ -281,7 +282,7 @@
   stylesCleanTasks = [];
   stylesBuildTasks = [];
   stylesWatchTasks = [];
-  stylesData = (ref$ = pkg.gulp.styles) != null
+  stylesData = (ref$ = tasks.styles) != null
     ? ref$
     : {};
   stylesCleanTask = typicalCleanTask;
@@ -402,7 +403,7 @@
   scriptsCleanTasks = [];
   scriptsBuildTasks = [];
   scriptsWatchTasks = [];
-  scriptsData = (ref$ = pkg.gulp.scripts) != null
+  scriptsData = (ref$ = tasks.scripts) != null
     ? ref$
     : {};
   scriptsCleanTask = typicalCleanTask;
@@ -586,7 +587,7 @@
   htmlCleanTasks = [];
   htmlBuildTasks = [];
   htmlWatchTasks = [];
-  htmlData = (ref$ = pkg.gulp.html) != null
+  htmlData = (ref$ = tasks.html) != null
     ? ref$
     : {};
   htmlGetFilesSelector = curry$(function(srcDir, params){
@@ -738,10 +739,10 @@
     gulp.task('html-watch', htmlWatchTasks);
     watchTasks.push('html-watch');
   }
-  cleanData = (ref$ = pkg.gulp.clean) != null
+  cleanData = (ref$ = tasks.clean) != null
     ? ref$
     : [];
-  distCleanData = (ref$ = pkg.gulp.distclean) != null
+  distCleanData = (ref$ = tasks.distclean) != null
     ? ref$
     : [];
   distCleanTasks = [];

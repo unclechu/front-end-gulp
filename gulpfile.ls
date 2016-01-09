@@ -13,7 +13,7 @@ require! {
 	gulp
 	del
 	\vinyl-paths
-	\gulp-task-listing : tasks
+	\gulp-task-listing : task-listing
 	\gulp-callback     : gcb
 	\gulp-plumber      : plumber
 	\gulp-if           : gulpif
@@ -30,12 +30,14 @@ const argv = do
 		.boolean \ignore-errors
 		.argv
 
-const pkg = require path.join process.cwd!, \package.json
+const tasks-file-path = path.join process.cwd!, \front-end-tasks.json
 
-unless pkg.gulp?
-	throw new Error 'No "gulp" key in package.json'
+unless fs.existsSync tasks-file-path
+	throw new Error 'No front-end-tasks.json file'
 
-gulp.task \help, tasks
+const tasks = require tasks-file-path
+
+gulp.task \help, task-listing
 
 const is-production-mode = argv.production
 
@@ -136,7 +138,7 @@ sprites-clean-tasks = []
 sprites-build-tasks = []
 sprites-watch-tasks = []
 
-const sprites-data = pkg.gulp.sprites ? {}
+const sprites-data = tasks.sprites ? {}
 
 # helper
 const sprite-prepare-paths = (params, cb) !->
@@ -294,7 +296,7 @@ styles-clean-tasks = []
 styles-build-tasks = []
 styles-watch-tasks = []
 
-const styles-data = pkg.gulp.styles ? {}
+const styles-data = tasks.styles ? {}
 
 const styles-clean-task = typical-clean-task
 
@@ -407,7 +409,7 @@ scripts-clean-tasks = []
 scripts-build-tasks = []
 scripts-watch-tasks = []
 
-const scripts-data = pkg.gulp.scripts ? {}
+const scripts-data = tasks.scripts ? {}
 
 const scripts-clean-task = typical-clean-task
 
@@ -577,7 +579,7 @@ html-clean-tasks = []
 html-build-tasks = []
 html-watch-tasks = []
 
-const html-data = pkg.gulp.html ? {}
+const html-data = tasks.html ? {}
 
 const html-get-files-selector = (src-dir ? '', params) -->
 	switch params.type
@@ -706,8 +708,8 @@ if html-watch-tasks.length > 0
 
 # clean {{{1
 
-const clean-data = pkg.gulp.clean ? []
-const dist-clean-data = pkg.gulp.distclean ? []
+const clean-data = tasks.clean ? []
+const dist-clean-data = tasks.distclean ? []
 
 dist-clean-tasks = []
 
