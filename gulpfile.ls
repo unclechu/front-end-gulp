@@ -249,9 +249,9 @@ const sprite-init-tasks = (name, item, sub-task=false) !->
 		css-var-map : let name then (s) !->
 			s.name = sprite-get-name-by-mask name, s, params.data-item-name-mask
 	
-	const clean-task-name = "clean-sprite-#name"
+	const clean-task-name = "clean:sprite-#name"
 	const build-task-name = "sprite-#name"
-	const watch-task-name = "#{build-task-name}-watch"
+	const watch-task-name = "watch:#{build-task-name}"
 	
 	const pre-build-tasks = [ clean-task-name ] ++ params.build-deps
 	
@@ -283,14 +283,14 @@ for name, item of sprites-data
 	init-task-iteration name, item, sprite-init-tasks
 
 if sprites-clean-tasks.length > 0
-	gulp.task \clean-sprites, sprites-clean-tasks
-	clean-tasks.push \clean-sprites
+	gulp.task \clean:sprites, sprites-clean-tasks
+	clean-tasks.push \clean:sprites
 if sprites-build-tasks.length > 0
 	gulp.task \sprites, sprites-build-tasks
 	default-tasks.push \sprites
 if sprites-watch-tasks.length > 0
-	gulp.task \sprites-watch, sprites-watch-tasks
-	watch-tasks.push \sprites-watch
+	gulp.task \watch:sprites, sprites-watch-tasks
+	watch-tasks.push \watch:sprites
 
 # sprites }}}1
 
@@ -355,9 +355,9 @@ const styles-init-tasks = (name, item, sub-task=false) !->
 	
 	params.type |> check-for-supported-type \styles
 	
-	const clean-task-name = "clean-styles-#name"
+	const clean-task-name = "clean:styles-#name"
 	const build-task-name = "styles-#name"
-	const watch-task-name = "#{build-task-name}-watch"
+	const watch-task-name = "watch:#{build-task-name}"
 	
 	const pre-build-tasks = [ clean-task-name ] ++ params.build-deps
 	
@@ -396,14 +396,14 @@ for name, item of styles-data
 	init-task-iteration name, item, styles-init-tasks
 
 if styles-clean-tasks.length > 0
-	gulp.task \clean-styles, styles-clean-tasks
-	clean-tasks.push \clean-styles
+	gulp.task \clean:styles, styles-clean-tasks
+	clean-tasks.push \clean:styles
 if styles-build-tasks.length > 0
 	gulp.task \styles, styles-build-tasks
 	default-tasks.push \styles
 if styles-watch-tasks.length > 0
-	gulp.task \styles-watch, styles-watch-tasks
-	watch-tasks.push \styles-watch
+	gulp.task \watch:styles, styles-watch-tasks
+	watch-tasks.push \watch:styles
 
 # styles }}}1
 
@@ -514,10 +514,10 @@ const scripts-init-tasks = (name, item, sub-task=false) !->
 					[ (path.join src-dir, ..) for src-params.jshint-relative-exclude ]
 		}
 	
-	const clean-task-name  = "clean-scripts-#name"
+	const clean-task-name  = "clean:scripts-#name"
 	const build-task-name  = "scripts-#name"
 	const jshint-task-name = "#{build-task-name}-jshint"
-	const watch-task-name  = "#{build-task-name}-watch"
+	const watch-task-name  = "watch:#{build-task-name}"
 	
 	const pre-build-tasks =
 		[ clean-task-name ] ++
@@ -566,14 +566,14 @@ for name, item of scripts-data
 	init-task-iteration name, item, scripts-init-tasks
 
 if scripts-clean-tasks.length > 0
-	gulp.task \clean-scripts, scripts-clean-tasks
-	clean-tasks.push \clean-scripts
+	gulp.task \clean:scripts, scripts-clean-tasks
+	clean-tasks.push \clean:scripts
 if scripts-build-tasks.length > 0
 	gulp.task \scripts, scripts-build-tasks
 	default-tasks.push \scripts
 if scripts-watch-tasks.length > 0
-	gulp.task \scripts-watch, scripts-watch-tasks
-	watch-tasks.push \scripts-watch
+	gulp.task \watch:scripts, scripts-watch-tasks
+	watch-tasks.push \watch:scripts
 
 # scripts }}}1
 
@@ -660,9 +660,9 @@ const html-init-tasks = (name, item, sub-task=false) !->
 	
 	params.type |> check-for-supported-type \html
 	
-	const clean-task-name = "clean-html-#name"
+	const clean-task-name = "clean:html-#name"
 	const build-task-name = "html-#name"
-	const watch-task-name = "#{build-task-name}-watch"
+	const watch-task-name = "watch:#{build-task-name}"
 	
 	const pre-build-tasks = [ clean-task-name ] ++ params.build-deps
 	
@@ -699,14 +699,14 @@ for name, item of html-data
 	init-task-iteration name, item, html-init-tasks
 
 if html-clean-tasks.length > 0
-	gulp.task \clean-html, html-clean-tasks
-	clean-tasks.push \clean-html
+	gulp.task \clean:html, html-clean-tasks
+	clean-tasks.push \clean:html
 if html-build-tasks.length > 0
 	gulp.task \html, html-build-tasks
 	default-tasks.push \html
 if html-watch-tasks.length > 0
-	gulp.task \html-watch, html-watch-tasks
-	watch-tasks.push \html-watch
+	gulp.task \watch:html, html-watch-tasks
+	watch-tasks.push \watch:html
 
 # html }}}1
 

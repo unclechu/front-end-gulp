@@ -241,9 +241,9 @@
           };
         }.call(this, name))
       };
-      cleanTaskName = "clean-sprite-" + name;
+      cleanTaskName = "clean:sprite-" + name;
       buildTaskName = "sprite-" + name;
-      watchTaskName = buildTaskName + "-watch";
+      watchTaskName = "watch:" + buildTaskName;
       preBuildTasks = [cleanTaskName].concat(params.buildDeps);
       gulp.task(cleanTaskName, (function(name, spriteParams, params){
         return function(cb){
@@ -270,16 +270,16 @@
     initTaskIteration(name, item, spriteInitTasks);
   }
   if (spritesCleanTasks.length > 0) {
-    gulp.task('clean-sprites', spritesCleanTasks);
-    cleanTasks.push('clean-sprites');
+    gulp.task('clean:sprites', spritesCleanTasks);
+    cleanTasks.push('clean:sprites');
   }
   if (spritesBuildTasks.length > 0) {
     gulp.task('sprites', spritesBuildTasks);
     defaultTasks.push('sprites');
   }
   if (spritesWatchTasks.length > 0) {
-    gulp.task('sprites-watch', spritesWatchTasks);
-    watchTasks.push('sprites-watch');
+    gulp.task('watch:sprites', spritesWatchTasks);
+    watchTasks.push('watch:sprites');
   }
   stylesCleanTasks = [];
   stylesBuildTasks = [];
@@ -349,9 +349,9 @@
       : {});
     checkForSupportedType('styles')(
     params.type);
-    cleanTaskName = "clean-styles-" + name;
+    cleanTaskName = "clean:styles-" + name;
     buildTaskName = "styles-" + name;
-    watchTaskName = buildTaskName + "-watch";
+    watchTaskName = "watch:" + buildTaskName;
     preBuildTasks = [cleanTaskName].concat(params.buildDeps);
     gulp.task(cleanTaskName, (function(name, params){
       return function(cb){
@@ -391,16 +391,16 @@
     initTaskIteration(name, item, stylesInitTasks);
   }
   if (stylesCleanTasks.length > 0) {
-    gulp.task('clean-styles', stylesCleanTasks);
-    cleanTasks.push('clean-styles');
+    gulp.task('clean:styles', stylesCleanTasks);
+    cleanTasks.push('clean:styles');
   }
   if (stylesBuildTasks.length > 0) {
     gulp.task('styles', stylesBuildTasks);
     defaultTasks.push('styles');
   }
   if (stylesWatchTasks.length > 0) {
-    gulp.task('styles-watch', stylesWatchTasks);
-    watchTasks.push('styles-watch');
+    gulp.task('watch:styles', stylesWatchTasks);
+    watchTasks.push('watch:styles');
   }
   scriptsCleanTasks = [];
   scriptsBuildTasks = [];
@@ -516,10 +516,10 @@
         }
         return results$;
       }())), ref$);
-      cleanTaskName = "clean-scripts-" + name;
+      cleanTaskName = "clean:scripts-" + name;
       buildTaskName = "scripts-" + name;
       jshintTaskName = buildTaskName + "-jshint";
-      watchTaskName = buildTaskName + "-watch";
+      watchTaskName = "watch:" + buildTaskName;
       preBuildTasks = [cleanTaskName].concat(params.buildDeps, params.jshintEnabled && [jshintTaskName] || []);
       if (params.jshintEnabled) {
         gulp.task(jshintTaskName, (function(name, params){
@@ -575,16 +575,16 @@
     initTaskIteration(name, item, scriptsInitTasks);
   }
   if (scriptsCleanTasks.length > 0) {
-    gulp.task('clean-scripts', scriptsCleanTasks);
-    cleanTasks.push('clean-scripts');
+    gulp.task('clean:scripts', scriptsCleanTasks);
+    cleanTasks.push('clean:scripts');
   }
   if (scriptsBuildTasks.length > 0) {
     gulp.task('scripts', scriptsBuildTasks);
     defaultTasks.push('scripts');
   }
   if (scriptsWatchTasks.length > 0) {
-    gulp.task('scripts-watch', scriptsWatchTasks);
-    watchTasks.push('scripts-watch');
+    gulp.task('watch:scripts', scriptsWatchTasks);
+    watchTasks.push('watch:scripts');
   }
   htmlCleanTasks = [];
   htmlBuildTasks = [];
@@ -692,9 +692,9 @@
       : {});
     checkForSupportedType('html')(
     params.type);
-    cleanTaskName = "clean-html-" + name;
+    cleanTaskName = "clean:html-" + name;
     buildTaskName = "html-" + name;
-    watchTaskName = buildTaskName + "-watch";
+    watchTaskName = "watch:" + buildTaskName;
     preBuildTasks = [cleanTaskName].concat(params.buildDeps);
     gulp.task(cleanTaskName, (function(name, params){
       return function(cb){
@@ -730,16 +730,16 @@
     initTaskIteration(name, item, htmlInitTasks);
   }
   if (htmlCleanTasks.length > 0) {
-    gulp.task('clean-html', htmlCleanTasks);
-    cleanTasks.push('clean-html');
+    gulp.task('clean:html', htmlCleanTasks);
+    cleanTasks.push('clean:html');
   }
   if (htmlBuildTasks.length > 0) {
     gulp.task('html', htmlBuildTasks);
     defaultTasks.push('html');
   }
   if (htmlWatchTasks.length > 0) {
-    gulp.task('html-watch', htmlWatchTasks);
-    watchTasks.push('html-watch');
+    gulp.task('watch:html', htmlWatchTasks);
+    watchTasks.push('watch:html');
   }
   cleanData = (ref$ = tasks.clean) != null
     ? ref$
