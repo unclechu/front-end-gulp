@@ -31,6 +31,9 @@
   tasks = require(tasksFilePath);
   gulp.task('help', taskListing);
   isProductionMode = argv.production;
+  if (isProductionMode) {
+    gutil.log('Production mode is enabled');
+  }
   ignoreErrors = argv.ignoreErrors;
   supportedTypes = {
     sprites: ['spritesmith'],

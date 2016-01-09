@@ -45,6 +45,9 @@ gulp.task \help, task-listing
 
 const is-production-mode = argv.production
 
+if is-production-mode
+	gutil.log 'Production mode is enabled'
+
 # ignore errors, will be enabled anyway by any watcher
 ignore-errors = argv.ignore-errors
 
