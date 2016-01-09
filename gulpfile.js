@@ -5,13 +5,14 @@
  * @see {@link https://github.com/unclechu/front-end-gulp-pattern|GitHub}
  */
 (function(){
-  var path, fs, yargs, gulp, del, vinylPaths, taskListing, gcb, plumber, gulpif, rename, sourcemaps, argv, tasksFilePath, tasks, isProductionMode, ignoreErrors, supportedTypes, watchTasks, defaultTasks, cleanTasks, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, rmIt, typicalCleanTask, spritesCleanTasks, spritesBuildTasks, spritesWatchTasks, spritesData, ref$, spritePreparePaths, spriteCleanTask, spriteBuildTask, spriteGetNameByMask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsExpandRelativeShimPaths, scriptsInitTasks, htmlCleanTasks, htmlBuildTasks, htmlWatchTasks, htmlData, htmlGetFilesSelector, htmlCleanTask, htmlBuildTask, htmlInitTasks, cleanData, distCleanData, distCleanTasks;
+  var path, fs, yargs, del, gulp, vinylPaths, gutil, taskListing, gcb, plumber, gulpif, rename, sourcemaps, argv, tasksFilePath, ref$, tasks, isProductionMode, ignoreErrors, supportedTypes, watchTasks, defaultTasks, cleanTasks, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, rmIt, typicalCleanTask, spritesCleanTasks, spritesBuildTasks, spritesWatchTasks, spritesData, spritePreparePaths, spriteCleanTask, spriteBuildTask, spriteGetNameByMask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsExpandRelativeShimPaths, scriptsInitTasks, htmlCleanTasks, htmlBuildTasks, htmlWatchTasks, htmlData, htmlGetFilesSelector, htmlCleanTask, htmlBuildTask, htmlInitTasks, cleanData, distCleanData, distCleanTasks;
   path = require('path');
   fs = require('fs');
   yargs = require('yargs');
-  gulp = require('gulp');
   del = require('del');
+  gulp = require('gulp');
   vinylPaths = require('vinyl-paths');
+  gutil = require('gulp-util');
   taskListing = require('gulp-task-listing');
   gcb = require('gulp-callback');
   plumber = require('gulp-plumber');
@@ -22,9 +23,10 @@
     production: false,
     ignoreErrors: false
   }).boolean('production').boolean('ignore-errors').argv;
-  tasksFilePath = path.join(process.cwd(), 'front-end-tasks.json');
+  tasksFilePath = path.resolve(process.cwd(), (ref$ = argv.tasksJson) != null ? ref$ : 'front-end-tasks.json');
+  gutil.log("Using tasks JSON file: '" + tasksFilePath + "'");
   if (!fs.existsSync(tasksFilePath)) {
-    throw new Error('No front-end-tasks.json file');
+    throw new Error("Tasks JSON file '" + tasksFilePath + "' isn't exists");
   }
   tasks = require(tasksFilePath);
   gulp.task('help', taskListing);

@@ -10,9 +10,10 @@ require! {
 	
 	yargs
 	
-	gulp
 	del
+	gulp
 	\vinyl-paths
+	\gulp-util         : gutil
 	\gulp-task-listing : task-listing
 	\gulp-callback     : gcb
 	\gulp-plumber      : plumber
@@ -30,10 +31,13 @@ const argv = do
 		.boolean \ignore-errors
 		.argv
 
-const tasks-file-path = path.join process.cwd!, \front-end-tasks.json
+const tasks-file-path =
+	argv.tasks-json ? \front-end-tasks.json |> path.resolve process.cwd!, _
 
-unless fs.existsSync tasks-file-path
-	throw new Error 'No front-end-tasks.json file'
+gutil.log "Using tasks JSON file: '#{tasks-file-path}'"
+
+unless fs.exists-sync tasks-file-path
+	throw new Error "Tasks JSON file '#{tasks-file-path}' isn't exists"
 
 const tasks = require tasks-file-path
 
