@@ -5,7 +5,7 @@
  * @see {@link https://github.com/unclechu/front-end-gulp-pattern|GitHub}
  */
 (function(){
-  var path, fs, yargs, del, gulp, vinylPaths, gutil, taskListing, gcb, plumber, gulpif, rename, sourcemaps, argv, tasksFilePath, ref$, tasks, isProductionMode, ignoreErrors, supportedTypes, watchTasks, defaultTasks, cleanTasks, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, rmIt, typicalCleanTask, spritesCleanTasks, spritesBuildTasks, spritesWatchTasks, spritesData, spritePreparePaths, spriteCleanTask, spriteBuildTask, spriteGetNameByMask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsExpandRelativeShimPaths, scriptsInitTasks, htmlCleanTasks, htmlBuildTasks, htmlWatchTasks, htmlData, htmlGetFilesSelector, htmlCleanTask, htmlBuildTask, htmlInitTasks, cleanData, distCleanData, distCleanTasks;
+  var path, fs, yargs, del, gulp, vinylPaths, gutil, taskListing, gcb, plumber, gulpif, rename, sourcemaps, argv, tasksFilePath, ref$, tasks, isProductionMode, isPretty, isMinify, ignoreErrors, supportedTypes, watchTasks, defaultTasks, cleanTasks, renameBuildFile, initTaskIteration, initWatcherTask, preparePaths, checkForSupportedType, rmIt, typicalCleanTask, spritesCleanTasks, spritesBuildTasks, spritesWatchTasks, spritesData, spritePreparePaths, spriteCleanTask, spriteBuildTask, spriteGetNameByMask, spriteInitTasks, name, item, stylesCleanTasks, stylesBuildTasks, stylesWatchTasks, stylesData, stylesCleanTask, stylesBuildTask, stylesInitTasks, scriptsCleanTasks, scriptsBuildTasks, scriptsWatchTasks, scriptsData, scriptsCleanTask, scriptsJshintTask, scriptsBuildBrowserifyTask, scriptsExpandRelativeShimPaths, scriptsInitTasks, htmlCleanTasks, htmlBuildTasks, htmlWatchTasks, htmlData, htmlGetFilesSelector, htmlCleanTask, htmlBuildTask, htmlInitTasks, cleanData, distCleanData, distCleanTasks;
   path = require('path');
   fs = require('fs');
   yargs = require('yargs');
@@ -31,8 +31,19 @@
   tasks = require(tasksFilePath);
   gulp.task('help', taskListing);
   isProductionMode = argv.production;
+  isPretty = argv.pretty;
+  isMinify = argv.minify;
+  if (isPretty != null && isMinify != null) {
+    throw new Error("You can't use --pretty and --minify together");
+  }
   if (isProductionMode) {
     gutil.log('Production mode is enabled');
+  }
+  if (isMinify != null) {
+    gutil.log('Forced minify mode');
+  }
+  if (isPretty != null) {
+    gutil.log('Forced pretty mode');
   }
   ignoreErrors = argv.ignoreErrors;
   supportedTypes = {
@@ -293,8 +304,12 @@
   stylesCleanTask = typicalCleanTask;
   stylesBuildTask = function(name, params, cb){
     preparePaths(params, function(srcFilePath, srcDir, destDir){
-      var options, ref$, sourceMaps, plugin;
-      options = import$((ref$ = Object.create(null), ref$.compress = isProductionMode, ref$), params.type === 'stylus' && params.shim != null
+      var options, ref$, ref1$, sourceMaps, plugin;
+      options = import$((ref$ = Object.create(null), ref$.compress = isMinify != null
+        ? isMinify
+        : (ref1$ = isPretty != null ? false : null) != null
+          ? ref1$
+          : (ref1$ = params.compress) != null ? ref1$ : isProductionMode, ref$), params.type === 'stylus' && params.shim != null
         ? {
           use: (function(){
             var i$, x$, ref$, len$, results$ = [];
@@ -338,6 +353,7 @@
       srcDir: (ref$ = item.srcDir) != null ? ref$ : null,
       buildFile: item.buildFile,
       destDir: (ref$ = item.destDir) != null ? ref$ : null,
+      compress: (ref$ = item.compress) != null ? ref$ : null,
       shim: (ref$ = item.shim) != null ? ref$ : null,
       buildDeps: (ref$ = item.buildDeps) != null
         ? ref$
@@ -429,7 +445,7 @@
     });
   };
   scriptsBuildBrowserifyTask = function(name, params, cb){
-    var options, browserify, uglify;
+    var options, browserify, isUglifyEnabled, ref$, uglify;
     options = import$(import$({
       shim: params.shim,
       debug: params.debug === true || (!isProductionMode && params.debug !== false)
@@ -439,15 +455,24 @@
       extensions: params.extensions
     } || {});
     browserify = require('gulp-browserify');
-    uglify = require('gulp-uglify');
+    isUglifyEnabled = isMinify != null
+      ? isMinify
+      : (ref$ = isPretty != null ? false : null) != null
+        ? ref$
+        : (ref$ = params.uglify) != null ? ref$ : isProductionMode;
+    uglify = !isUglifyEnabled
+      ? null
+      : require('gulp-uglify');
     preparePaths(params, function(srcFilePath, srcDir, destDir){
       gulp.src(srcFilePath, {
         read: false
       }).pipe(gulpif(ignoreErrors, plumber({
         errorHandler: cb
-      }))).pipe(browserify(options)).pipe(gulpif(isProductionMode, uglify({
-        preserveComments: 'some'
-      }))).pipe(rename(function(buildPath){
+      }))).pipe(browserify(options)).pipe(isUglifyEnabled
+        ? uglify({
+          preserveComments: 'some'
+        })
+        : gutil.noop()).pipe(rename(function(buildPath){
         renameBuildFile(buildPath, params.mainSrc, params.buildFile);
       })).pipe(gulp.dest(destDir)).pipe(gcb(cb));
     });
@@ -483,6 +508,7 @@
       srcDir: (ref$ = item.srcDir) != null ? ref$ : null,
       buildFile: item.buildFile,
       destDir: (ref$ = item.destDir) != null ? ref$ : null,
+      uglify: (ref$ = item.uglify) != null ? ref$ : null,
       transform: (ref$ = item.transform) != null ? ref$ : null,
       extensions: (ref$ = item.extensions) != null ? ref$ : null,
       buildDeps: (ref$ = item.buildDeps) != null
@@ -634,8 +660,14 @@
   };
   htmlBuildTask = function(name, params, cb){
     preparePaths(params, function(srcFilePath, srcDir, destDir){
-      var options, ref$, sourceMaps, plugin, isSingleFile, src, hasErr;
-      options = import$((ref$ = Object.create(null), ref$.pretty = params.pretty === true, ref$), params.locals != null && {
+      var options, ref$, ref1$, sourceMaps, plugin, isSingleFile, src, hasErr;
+      options = import$((ref$ = Object.create(null), ref$.pretty = isPretty != null
+        ? isPretty
+        : (ref1$ = isMinify != null ? false : null) != null
+          ? ref1$
+          : (ref1$ = params.pretty) != null
+            ? ref1$
+            : !isProductionMode, ref$), params.locals != null && {
         locals: params.locals
       } || {});
       sourceMaps = params.sourceMaps === true || (!isProductionMode && params.sourceMaps !== false);
@@ -685,9 +717,7 @@
         : [],
       addToWatchersList: (ref$ = item.addToWatchersList) != null ? ref$ : null,
       watchFiles: (ref$ = item.watchFiles) != null ? ref$ : null,
-      pretty: (ref$ = item.pretty) != null
-        ? ref$
-        : !isProductionMode
+      pretty: (ref$ = item.pretty) != null ? ref$ : null
     }, typeof item.sourceMaps === 'boolean' && {
       sourceMaps: item.sourceMaps
     } || {}), isProductionMode && item.production != null

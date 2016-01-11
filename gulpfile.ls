@@ -44,9 +44,15 @@ const tasks = require tasks-file-path
 gulp.task \help, task-listing
 
 const is-production-mode = argv.production
+const is-pretty          = argv.pretty # prevent minify
+const is-minify          = argv.minify # hard minify
 
-if is-production-mode
-	gutil.log 'Production mode is enabled'
+if is-pretty? and is-minify?
+	throw new Error "You can't use --pretty and --minify together"
+
+gutil.log 'Production mode is enabled' if is-production-mode
+gutil.log 'Forced minify mode'         if is-minify?
+gutil.log 'Forced pretty mode'         if is-pretty?
 
 # ignore errors, will be enabled anyway by any watcher
 ignore-errors = argv.ignore-errors
@@ -65,9 +71,9 @@ const supported-types =
 		\jade
 		...
 
-watch-tasks   = []
-default-tasks = []
-clean-tasks   = []
+const watch-tasks   = []
+const default-tasks = []
+const clean-tasks   = []
 
 # helpers {{{1
 
@@ -141,9 +147,9 @@ const typical-clean-task = (name, params, cb) !->
 
 # sprites {{{1
 
-sprites-clean-tasks = []
-sprites-build-tasks = []
-sprites-watch-tasks = []
+const sprites-clean-tasks = []
+const sprites-build-tasks = []
+const sprites-watch-tasks = []
 
 const sprites-data = tasks.sprites ? {}
 
@@ -183,9 +189,7 @@ const sprite-clean-task = (name, sprite-params, params, cb) !->
 		[ params.img-dest-dir? and img.build-file-path or img.dest-dir ]
 
 const sprite-build-task = (name, sprite-params, params, cb) !->
-	require! {
-		\gulp.spritesmith : spritesmith
-	}
+	require! \gulp.spritesmith : spritesmith
 	
 	(img, data) <-! sprite-prepare-paths params
 	
@@ -299,9 +303,9 @@ if sprites-watch-tasks.length > 0
 
 # styles {{{1
 
-styles-clean-tasks = []
-styles-build-tasks = []
-styles-watch-tasks = []
+const styles-clean-tasks = []
+const styles-build-tasks = []
+const styles-watch-tasks = []
 
 const styles-data = tasks.styles ? {}
 
@@ -311,7 +315,13 @@ const styles-build-task = (name, params, cb) !->
 	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
 	
 	const options = (Object.create null)
-		<<< { compress: is-production-mode }
+		<<< {
+			compress:
+				is-minify ?
+				(if is-pretty? then false else null) ?
+				params.compress ?
+				is-production-mode
+		}
 		<<< (
 			if (params.type is \stylus) and params.shim?
 				use: [ (require path.join process.cwd!, ..) for params.shim ]
@@ -348,6 +358,7 @@ const styles-init-tasks = (name, item, sub-task=false) !->
 		item.src-dir              ? null
 		item.build-file
 		item.dest-dir             ? null
+		item.compress             ? null
 		item.shim                 ? null
 		item.build-deps           ? []
 		item.clean-target         ? null
@@ -412,9 +423,9 @@ if styles-watch-tasks.length > 0
 
 # scripts {{{1
 
-scripts-clean-tasks = []
-scripts-build-tasks = []
-scripts-watch-tasks = []
+const scripts-clean-tasks = []
+const scripts-build-tasks = []
+const scripts-watch-tasks = []
 
 const scripts-data = tasks.scripts ? {}
 
@@ -448,17 +459,26 @@ const scripts-build-browserify-task = (name, params, cb) !->
 		<<< (params.transform?  and { params.transform  } or {})
 		<<< (params.extensions? and { params.extensions } or {})
 	
-	require! {
-		\gulp-browserify : browserify
-		\gulp-uglify     : uglify
-	}
+	require! \gulp-browserify : browserify
+	
+	const is-uglify-enabled =
+		is-minify ?
+		(if is-pretty? then false else null) ?
+		params.uglify ?
+		is-production-mode
+	
+	const uglify = unless is-uglify-enabled then null else require \gulp-uglify
 	
 	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
 	
 	gulp.src src-file-path, read: false
 		.pipe gulpif ignore-errors, plumber error-handler: cb
 		.pipe browserify options
-		.pipe gulpif is-production-mode, uglify preserve-comments: \some
+		.pipe (
+			if is-uglify-enabled
+				uglify preserve-comments: \some
+			else
+				gutil.noop!)
 		.pipe rename (build-path) !->
 			rename-build-file build-path, params.main-src, params.build-file
 		.pipe gulp.dest dest-dir
@@ -489,6 +509,7 @@ const scripts-init-tasks = (name, item, sub-task=false) !->
 		item.src-dir              ? null
 		item.build-file
 		item.dest-dir             ? null
+		item.uglify               ? null
 		item.transform            ? null
 		item.extensions           ? null
 		item.build-deps           ? []
@@ -582,9 +603,9 @@ if scripts-watch-tasks.length > 0
 
 # html {{{1
 
-html-clean-tasks = []
-html-build-tasks = []
-html-watch-tasks = []
+const html-clean-tasks = []
+const html-build-tasks = []
+const html-watch-tasks = []
 
 const html-data = tasks.html ? {}
 
@@ -616,8 +637,13 @@ const html-build-task = (name, params, cb) !->
 	(src-file-path, src-dir, dest-dir) <-! prepare-paths params
 	
 	const options = (Object.create null)
-		<<< { pretty: (params.pretty is on) }
-		<<< (params.locals? and { params.locals } or {})
+		<<< {
+			pretty:
+				is-pretty ?
+				(if is-minify? then false else null) ?
+				params.pretty ?
+				(not is-production-mode)
+		} <<< (params.locals? and { params.locals } or {})
 	
 	const source-maps =
 		(params.source-maps is on)
@@ -657,7 +683,7 @@ const html-init-tasks = (name, item, sub-task=false) !->
 		item.build-deps           ? []
 		item.add-to-watchers-list ? null
 		item.watch-files          ? null
-		item.pretty               ? (not is-production-mode)
+		item.pretty               ? null
 	} <<< ((typeof item.source-maps is \boolean) and { item.source-maps } or {})
 	<<< (if is-production-mode and item.production? then item.production else {})
 	
@@ -718,7 +744,7 @@ if html-watch-tasks.length > 0
 const clean-data = tasks.clean ? []
 const dist-clean-data = tasks.distclean ? []
 
-dist-clean-tasks = []
+const dist-clean-tasks = []
 
 if (clean-data.length > 0) or (clean-tasks.length > 0)
 	gulp.task \clean, clean-tasks, (cb) !-> rm-it clean-data, cb
