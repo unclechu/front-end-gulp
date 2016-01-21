@@ -9,6 +9,10 @@ Gulp CLI tool named as `font-end-gulp`.
 You can declare your front-end deploy tasks
 in `front-end-tasks.json` file (see also [Usage](#usage)).
 
+You also can use this tool with standard <b>Gulp</b>
+with regular `gulpfile.js` tasks without any worries,
+it works independently.
+
 Usage
 =====
 
