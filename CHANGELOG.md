@@ -23,7 +23,7 @@ Changelog
     or prevent it even if it's production mode or declared by task;
 13. Support custom json-config file by `--tasks-json=*.json` argument;
 14. Custom task parameters specific for production mode,
-    that extend current task parameters (works like sub-tasks).
+    that extends current task parameters (works like sub-tasks).
 
 1.0.1 / 11 Jan 2015
 -------------------
