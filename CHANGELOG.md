@@ -10,7 +10,7 @@ Changelog
 3.  <b>WARNING!</b> In scripts tasks field `jshintDisabled` renamed to `jshintEnabled`;
 4.  <b>WARNING!</b> In scripts tasks JSHint disabled by default;
 5.  <b>WARNING!</b> Sprites task now must have `type` field with at least `'spritesmith'`;
-6.  <b>WARNING!</b> New action prefixes for tasks names separated with symbol `:`
+6.  <b>WARNING!</b> New action prefixes for tasks names separated with symbol `:`,
     `clean:scripts` instead of `clean-scripts`,
     `watch:scripts` instead of `scripts-watch`;
 7.  Support `HTML` building by `Jade` sources;
