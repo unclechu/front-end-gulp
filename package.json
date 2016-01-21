@@ -1,7 +1,7 @@
 {
   "name": "front-end-gulp-pattern",
-  "version": "1.0.2",
-  "description": "Declarative front-end deploy tasks over Gulp",
+  "version": "2.0.0",
+  "description": "Declarative front-end deploy tasks using Gulp.js",
   "keywords": [
     "gulp",
     "deploy",
@@ -42,7 +42,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/unclechu/front-end-gulp-pattern"
+    "url": "git://github.com/unclechu/front-end-gulp-pattern.git"
   },
   "dependencies": {
     "del": "^2.0.2",
@@ -61,15 +61,14 @@
     "livescript": "1.4.0"
   },
   "engines": {
-    "node": ">= 4.0.0"
+    "node": ">=4.0.0",
+    "iojs": ">=3.0.0"
   },
   "directories": {
     "bin": "./bin/"
   },
   "files": [
     "bin/gulp-wrapper",
-    "LICENSE-MIT",
-    "README.md",
     "gulpfile.js"
   ]
 }
