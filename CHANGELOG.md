@@ -1,19 +1,29 @@
 Changelog
 =========
 
-2.0.0 / 9 Nov 2015
+2.0.0 / TODO TODO 2016
 ------------------
 
-1. License changed from `GPLv3` to `MIT`;
-2. <b>WARNING!</b> In scripts tasks field `jshintDisabled` renamed to `jshintEnabled`;
-3. <b>WARNING!</b> In scripts tasks JSHint disabled by default;
-4. <b>WARNING!</b> Sprites task now must have `type` field with at least `'spritesmith'`;
-5. Support `HTML` building by `Jade` sources;
-6. New optional param `cleanDir` to replace default clean behavior with just
-   removing target directory;
-7. Some code refactoring;
-8. LiveScript 1.4;
-9. Updated some dependencies versions.
+1.  License changed from `GPLv3` to `MIT`;
+2.  <b>WARNING!</b> Separated tasks declaring to own json-file named as
+    `front-end-tasks.json`;
+3.  <b>WARNING!</b> In scripts tasks field `jshintDisabled` renamed to `jshintEnabled`;
+4.  <b>WARNING!</b> In scripts tasks JSHint disabled by default;
+5.  <b>WARNING!</b> Sprites task now must have `type` field with at least `'spritesmith'`;
+6.  <b>WARNING!</b> New action prefixes for tasks names separated with symbol `:`
+    `clean:scripts` instead of `clean-scripts`,
+    `watch:scripts` instead of `scripts-watch`;
+7.  Support `HTML` building by `Jade` sources;
+8.  New optional param `cleanTarget` to replace default clean behavior with just
+    removing target directory;
+9.  Some code refactoring;
+10. LiveScript 1.4;
+11. Updated some dependencies versions;
+12. Added `--minify` and `--pretty` flags to forcing uglify/minify
+    or prevent it even if it's production mode or declared by task;
+13. Support custom json-config file by `--tasks-json=*.json` argument;
+14. Custom task parameters specific for production mode,
+    that extend current task parameters (works like sub-tasks).
 
 1.0.1 / 11 Jan 2015
 -------------------
