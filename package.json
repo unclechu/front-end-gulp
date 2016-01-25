@@ -26,6 +26,7 @@
     "spritesmith"
   ],
   "scripts": {
+    "test": "node_modules/.bin/mocha --timeout 15s --compilers ls:livescript",
     "build-gulpfile": "node_modules/.bin/lsc -c gulpfile.ls"
   },
   "bin": {
@@ -58,7 +59,13 @@
     "yargs": "^3.29.0"
   },
   "devDependencies": {
-    "livescript": "1.4.0"
+    "bluebird": "^3.1.4",
+    "chai": "^3.4.1",
+    "gulp-browserify": "0.5.1",
+    "gulp-stylus": "2.2.0",
+    "liveify-stable": "2.0.0",
+    "livescript": "1.4.0",
+    "mocha": "^2.3.4"
   },
   "engines": {
     "node": ">=4.0.0",

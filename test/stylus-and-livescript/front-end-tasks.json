@@ -1,0 +1,24 @@
+{
+  "styles": {
+    "client": {
+      "type": "stylus",
+      "path": "test-1/css",
+      "mainSrc": "main.styl",
+      "buildFile": "build.css"
+    }
+  },
+  "scripts": {
+    "client": {
+      "type": "browserify",
+      "path": "test-1/js",
+      "mainSrc": "main.ls",
+      "buildFile": "build.js",
+      "transform": [
+        "liveify-stable"
+      ],
+      "extensions": [
+        ".ls"
+      ]
+    }
+  }
+}
