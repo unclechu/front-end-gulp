@@ -1,5 +1,5 @@
-front-end-gulp-pattern
-======================
+front-end-gulp
+==============
 
 Declarative front-end deploy tasks using [Gulp.js](https://github.com/gulpjs/gulp).
 

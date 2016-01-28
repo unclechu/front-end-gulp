@@ -1,5 +1,5 @@
 {
-  "name": "front-end-gulp-pattern",
+  "name": "front-end-gulp",
   "version": "2.0.0",
   "description": "Declarative front-end deploy tasks using Gulp.js",
   "keywords": [
@@ -33,17 +33,17 @@
     "front-end-gulp": "./bin/gulp-wrapper"
   },
   "author": "Viacheslav Lotsmanov <lotsmanov89@gmail.com>",
-  "bugs": "https://github.com/unclechu/front-end-gulp-pattern/issues",
+  "bugs": "https://github.com/unclechu/front-end-gulp/issues",
   "license": "MIT",
   "licenses": [
     {
       "type": "MIT",
-      "url": "https://raw.githubusercontent.com/unclechu/front-end-gulp-pattern/master/LICENSE-MIT"
+      "url": "https://raw.githubusercontent.com/unclechu/front-end-gulp/master/LICENSE-MIT"
     }
   ],
   "repository": {
     "type": "git",
-    "url": "git://github.com/unclechu/front-end-gulp-pattern.git"
+    "url": "git://github.com/unclechu/front-end-gulp.git"
   },
   "dependencies": {
     "del": "^2.0.2",

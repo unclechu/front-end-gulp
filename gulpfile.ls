@@ -1,7 +1,7 @@
 /**
  * @author Viacheslav Lotsmanov
- * @license MIT (https://raw.githubusercontent.com/unclechu/front-end-gulp-pattern/master/LICENSE-MIT)
- * @see {@link https://github.com/unclechu/front-end-gulp-pattern|GitHub}
+ * @license MIT (https://raw.githubusercontent.com/unclechu/front-end-gulp/master/LICENSE-MIT)
+ * @see {@link https://github.com/unclechu/front-end-gulp|GitHub}
  */
 
 require! {

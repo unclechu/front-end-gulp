@@ -35,7 +35,7 @@ Changelog
 -------------------
 
 1. Browserify transforms now provided by `package.json`, no longer need to
-   modify `front-end-gulp-pattern` for support new transform
+   modify `front-end-gulp` for support new transform
    (see for "transform" and "extensions" keys in `package.json`).
 
 0.0.1 / 9 Jan 2015
