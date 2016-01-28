@@ -1,6 +1,6 @@
 {
   "styles": {
-    "client": {
+    "test-1": {
       "type": "stylus",
       "path": "test-1/css",
       "mainSrc": "main.styl",
@@ -8,7 +8,7 @@
     }
   },
   "scripts": {
-    "client": {
+    "test-1": {
       "type": "browserify",
       "path": "test-1/js",
       "mainSrc": "main.ls",
