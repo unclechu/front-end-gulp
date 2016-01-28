@@ -47,8 +47,8 @@ const check-for-exists-and-get-contents-p = (file-list)-->
 	
 	yield Promise.all file-list.map (-> get-file-contents-p it)
 
-const zip-cmp = (should-be-list, build-list)-->
-	*<- Promise.coroutine >> (do)
+const buf-zip-cmp = (should-be-list, build-list)-->
+	*<-! Promise.coroutine >> (do)
 	expect build-list.length .to.equal should-be-list.length
 	build-list
 		|> (.map (it, idx)-> it.equals should-be-list[idx])
@@ -86,6 +86,6 @@ describe \building-from-sources, (x)!->
 			
 			const build = yield check-for-exists-and-get-contents-p build-paths
 			
-			yield zip-cmp should-be, build
+			yield buf-zip-cmp should-be, build
 			
 			do done
