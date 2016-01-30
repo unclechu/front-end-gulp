@@ -15,23 +15,44 @@ chai.use chai-as-promised
 
 # promised spawn
 const run-p = (
-	bin
-	args
+	dir
+	_args
 	{
+		cwd=dir
+		
 		fwd-output=no
 		fwd-stdout=no
-		fwd-stderr=no
-		cwd
+		fwd-stderr=yes
+		
+		resolve-output=no
+		resolve-stdout=no
+		resolve-stderr=yes
 	}
 ) --> new Promise (resolve, reject)!->
-	const stdio =
-		null
-		if fwd-stdout or fwd-output then process.stdout else null
-		if fwd-stderr or fwd-output then process.stderr else null
-	const proc = spawn bin, args, {stdio, cwd}
+	const bin  = path.join dir, \front-end-gulp
+	const args = ["--cwd=#dir"] ++ _args
+	const proc = spawn bin, args, {cwd}
+	
+	const stdio-aggregate = [[],[],[]]
+	
+	proc.stdio.1.on \data, !->
+		stdio-aggregate.0.push it if resolve-output or (resolve-stdout and resolve-stderr)
+		stdio-aggregate.1.push it if resolve-stdout
+		process.stdout.write   it if fwd-stdout or fwd-output
+	proc.stdio.2.on \data, !->
+		stdio-aggregate.0.push it if resolve-output or (resolve-stdout and resolve-stderr)
+		stdio-aggregate.2.push it if resolve-stderr
+		process.stderr.write   it if fwd-stderr or fwd-output
+	
 	code <-! proc.on \close
+	const stdio-done = stdio-aggregate.map -> Buffer.concat it
 	switch code
-	| 0 => do resolve
+	| 0 =>
+		resolve switch
+			| resolve-output or (resolve-stdout and resolve-stderr) =>
+				stdio-aggregate.0.to-string!
+			| resolve-stdout => stdio-aggregate.1.to-string!
+			| resolve-stderr => stdio-aggregate.2.to-string!
 	| _ => reject new Error "Exit code: #code"
 
 const get-file-contents-p = (file)--> new Promise (resolve, reject)!->
@@ -81,9 +102,39 @@ describe \building-from-sources, (x)!->
 	
 	describe \#stylus-and-livescript, (x)!->
 		const test-dir = path.join __dirname, \stylus-and-livescript
-		const test-bin = path.join test-dir,  \front-end-gulp
 		const should-be-file = (dirname, test-task-name)-->
 			path.join test-dir, dirname, test-task-name
+		
+		it "ask for help", (done)!->
+			*<-! (co-caught done)
+			
+			yield do
+				run-p test-dir, <[ help ]>, {+resolve-stdout}
+					|> (.should.be.fulfilled)
+					|> ->
+						[
+							"Starting 'help'"
+							"Main Tasks"
+							"Sub Tasks"
+							"scripts-test-1"
+							"styles-test-1"
+							"clean:scripts-test-1"
+							"clean:styles-test-1"
+							"watch:scripts-test-1"
+							"watch:styles-test-1"
+							"Finished 'help'"
+						] .reduce _, it <|
+						(promise, string-match)->
+							(promise.and.eventually.have.string string-match)
+			
+			do done
+		
+		it "fall on unknown task name", (done)!->
+			*<-! (co-caught done)
+			yield do
+				run-p test-dir, <[ unknown-task-name ]>, {}
+					|> (.should.be.rejected)
+			do done
 		
 		it "simple build (test-1)", (done)!->
 			*<-! (co-caught done)
@@ -91,11 +142,7 @@ describe \building-from-sources, (x)!->
 			const fpath = should-be-file \test-1
 			const exts  = <[ css js ]>
 			
-			yield run-p do
-				test-bin
-				[ "--cwd=#test-dir" \styles-test-1 \scripts-test-1 ]
-				{ +fwd-stderr, cwd: test-dir }
-			
+			yield run-p test-dir, <[ styles-test-1 scripts-test-1 ]>, {}
 			yield should-compare exts, fpath, \build, (-> "build.#it")
 			
 			do done

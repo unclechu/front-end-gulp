@@ -46,7 +46,6 @@
     "url": "git://github.com/unclechu/front-end-gulp.git"
   },
   "dependencies": {
-    "chai-as-promised": "^5.2.0",
     "del": "^2.0.2",
     "gulp": "^3.9.0",
     "gulp-callback": "0.0.3",
@@ -62,6 +61,7 @@
   "devDependencies": {
     "bluebird": "^3.1.4",
     "chai": "^3.4.1",
+    "chai-as-promised": "^5.2.0",
     "gulp-browserify": "0.5.1",
     "gulp-stylus": "2.2.0",
     "liveify-stable": "2.0.0",
