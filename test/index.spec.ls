@@ -154,7 +154,7 @@ describe \building-from-sources, (x)!->
 			
 			yield run-p test-dir, clean-tasks, {}
 			yield args-preset check-if-its-cleaned-p
-			yield run-p test-dir, <[ styles-test-1 scripts-test-1 ]>, {}
+			yield run-p test-dir, tasks, {}
 			yield args-preset should-compare-p
 			
 			do done
