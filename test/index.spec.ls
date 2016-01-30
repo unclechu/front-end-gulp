@@ -63,13 +63,15 @@ const get-file-contents-p = (file)--> new Promise (resolve, reject)!->
 const is-file-exists-p = (file)--> new Promise (resolve)!->
 	fs.exists file, resolve
 
-const check-for-exists-and-get-contents-p = (file-list)-->
+const check-for-exists-p = (file-list, exists)-->
 	*<- Promise.coroutine >> (do)
-	
 	yield do
 		Promise.all file-list.map (-> is-file-exists-p it)
-			|> (.should.become [yes for til file-list.length])
-	
+			|> (.should.become [exists for til file-list.length])
+
+const check-for-exists-and-get-contents-p = (file-list)-->
+	*<- Promise.coroutine >> (do)
+	yield check-for-exists-p file-list, yes
 	yield Promise.all file-list.map (-> get-file-contents-p it)
 
 const buf-zip-cmp = (should-be-list, build-list)-->
@@ -82,19 +84,23 @@ const buf-zip-cmp = (should-be-list, build-list)-->
 # coroutine wrap with exception catcher
 const co-caught = (done)--> Promise.coroutine >> (do) >> (.catch done)
 
-const should-compare = (exts, fpath, build-dir, file-get-f)-->
+const get-build-path = (fpath, build-dir, file-get-f, it)-->
+	it |> (-> path.join "#it/#build-dir", file-get-f it) |> (fpath)
+
+const check-if-its-cleaned-p = (exts, fpath, build-dir, file-get-f)-->
+	*<-! Promise.coroutine >> (do)
+	const build-paths = exts.map get-build-path fpath, build-dir, file-get-f
+	yield check-for-exists-p build-paths, no
+
+const should-compare-p = (exts, fpath, build-dir, file-get-f)-->
 	*<-! Promise.coroutine >> (do)
 	
 	const should-be = yield Promise.all exts.map ->
 		get-file-contents-p fpath do
 			path.join "#it/should-be", file-get-f it
 	
-	const build-paths =
-		exts
-			|> (.map -> path.join "#it/#build-dir", file-get-f it)
-			|> (.map fpath)
-	
-	const build = yield check-for-exists-and-get-contents-p build-paths
+	const build-paths = exts.map get-build-path fpath, build-dir, file-get-f
+	const build       = yield check-for-exists-and-get-contents-p build-paths
 	
 	yield buf-zip-cmp should-be, build
 
@@ -139,10 +145,16 @@ describe \building-from-sources, (x)!->
 		it "simple build (test-1)", (done)!->
 			*<-! (co-caught done)
 			
-			const fpath = should-be-file \test-1
-			const exts  = <[ css js ]>
+			const fpath       = should-be-file \test-1
+			const exts        = <[ css js ]>
+			const tasks       = <[ styles-test-1 scripts-test-1 ]>
+			const clean-tasks = tasks.map (-> "clean:#it")
 			
+			const args-preset = -> it exts, fpath, \build, (-> "build.#it")
+			
+			yield run-p test-dir, clean-tasks, {}
+			yield args-preset check-if-its-cleaned-p
 			yield run-p test-dir, <[ styles-test-1 scripts-test-1 ]>, {}
-			yield should-compare exts, fpath, \build, (-> "build.#it")
+			yield args-preset should-compare-p
 			
 			do done
